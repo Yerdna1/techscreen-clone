@@ -9,7 +9,7 @@ let tray = null
 let isVisible = true
 
 // App URL - using production Vercel URL
-const APP_URL = 'http://localhost:3001' //process.env.APP_URL || 'https://techscreen-clone.vercel.app'
+const APP_URL = process.env.APP_URL || 'https://techscreen-clone.vercel.app'
 
 // Prevent multiple instances - must be called synchronously at startup
 const gotTheLock = app.requestSingleInstanceLock()
@@ -84,7 +84,7 @@ function createWindow() {
     mainWindow.setAlwaysOnTop(true, 'screen-saver')
   }
 
-  mainWindow.loadURL(`${APP_URL}/assistant`)
+  mainWindow.loadURL(`${APP_URL}/desktop/assistant`)
 
   // Hide from Alt+Tab (Windows)
   mainWindow.setSkipTaskbar(true)
@@ -127,7 +127,7 @@ function createTray() {
     {
       label: 'Open Assistant',
       click: () => {
-        mainWindow?.loadURL(`${APP_URL}/assistant`)
+        mainWindow?.loadURL(`${APP_URL}/desktop/assistant`)
         if (!isVisible) toggleVisibility()
       },
     },
