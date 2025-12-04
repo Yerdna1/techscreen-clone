@@ -44,13 +44,14 @@ export function TabsList({ children, className }: TabsListProps) {
   )
 }
 
-interface TabsTriggerProps {
+export interface TabsTriggerProps {
   value: string
   children: React.ReactNode
   className?: string
+  onClick?: () => void
 }
 
-export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
+export function TabsTrigger({ value, children, className, onClick }: TabsTriggerProps) {
   const context = React.useContext(TabsContext)
   if (!context) throw new Error("TabsTrigger must be used within Tabs")
 
@@ -65,7 +66,10 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
           : "hover:bg-background/50",
         className
       )}
-      onClick={() => setActiveTab(value)}
+      onClick={() => {
+        setActiveTab(value)
+        onClick?.()
+      }}
     >
       {children}
     </button>
