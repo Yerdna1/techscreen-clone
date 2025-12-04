@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { db, users } from "@/lib/db"
 import { eq } from "drizzle-orm"
 import { aj } from "@/lib/arcjet"
 
-export async function GET(request: NextRequest) {
+export async function GET(req: Request) {
   try {
     // Arcjet protection
-    const decision = await aj.protect(request as unknown as Request)
+    const decision = await aj.protect(req, { requested: 1 })
 
     if (decision.isDenied()) {
       return NextResponse.json(

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { generateAIResponse } from "@/lib/ai/openai"
 import { db, users, questions, tokenTransactions } from "@/lib/db"
@@ -6,10 +6,10 @@ import { eq } from "drizzle-orm"
 import { ajAI } from "@/lib/arcjet"
 import type { ProgrammingLanguage, InputType } from "@/types"
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
     // Arcjet protection - rate limiting and bot detection
-    const decision = await ajAI.protect(request as unknown as Request)
+    const decision = await ajAI.protect(req, { requested: 1 })
 
     if (decision.isDenied()) {
       return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { question, language, inputType } = body as {
       question: string
       language: ProgrammingLanguage
