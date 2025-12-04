@@ -11,6 +11,13 @@ const openai = new OpenAI({
   },
 })
 
+// Free models available on OpenRouter (add :free suffix)
+// Best free models for coding:
+// - deepseek/deepseek-chat-v3-0324:free - excellent for coding
+// - meta-llama/llama-4-maverick:free - 400B MoE model
+// - google/gemini-2.0-flash-exp:free - fast and capable
+const FREE_MODEL = "deepseek/deepseek-chat-v3-0324:free"
+
 const SYSTEM_PROMPT = `You are an expert programming assistant helping someone during a technical interview.
 Your role is to provide clear, accurate, and helpful responses to coding questions.
 
@@ -37,7 +44,7 @@ export async function generateAIResponse(
     : "Provide code examples in the most appropriate language."
 
   const response = await openai.chat.completions.create({
-    model: "anthropic/claude-sonnet-4", // Using Claude via OpenRouter
+    model: FREE_MODEL, // Using free model via OpenRouter
     messages: [
       {
         role: "system",
@@ -95,7 +102,7 @@ export async function generateAIResponseStream(
     : "Provide code examples in the most appropriate language."
 
   const stream = await openai.chat.completions.create({
-    model: "anthropic/claude-sonnet-4", // Using Claude via OpenRouter
+    model: FREE_MODEL, // Using free model via OpenRouter
     messages: [
       {
         role: "system",
