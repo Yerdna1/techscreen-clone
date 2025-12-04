@@ -1,0 +1,95 @@
+import { PricingPlan } from "@/types"
+
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "free",
+    name: "Free",
+    description: "Great for getting started. Includes free tokens to explore the app features.",
+    price: 0,
+    tokens: 3,
+    pricePerToken: "$0.00",
+    features: [
+      "Unlimited access to App",
+      "3 tokens",
+      "Text input support",
+      "Basic code assistance",
+    ],
+  },
+  {
+    id: "essential",
+    name: "Essential",
+    description: "Designed for occasional interview preparation. Ideal if you have 1-3 interviews / month.",
+    price: 19,
+    tokens: 50,
+    pricePerToken: "$0.38",
+    features: [
+      "Unlimited access to App",
+      "50 tokens / month",
+      "All input types",
+      "Priority response time",
+      "Code explanations",
+    ],
+  },
+  {
+    id: "professional",
+    name: "Professional",
+    description: "For active job seekers who need a higher number of solved questions per month.",
+    price: 29,
+    tokens: 160,
+    pricePerToken: "$0.18",
+    popular: true,
+    features: [
+      "Unlimited access to App",
+      "160 tokens / month",
+      "All input types",
+      "Fastest response time",
+      "Advanced reasoning",
+      "Code optimization tips",
+    ],
+  },
+  {
+    id: "expert",
+    name: "Expert",
+    description: "Tailored for serious candidates with frequent interviews, offering the maximum tokens.",
+    price: 49,
+    tokens: 500,
+    pricePerToken: "$0.10",
+    features: [
+      "Unlimited access to App",
+      "500 tokens / month",
+      "All input types",
+      "Fastest response time",
+      "Advanced reasoning",
+      "System design help",
+      "Priority support",
+    ],
+  },
+]
+
+export const PROGRAMMING_LANGUAGES = [
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "csharp", label: "C#" },
+  { value: "go", label: "Go" },
+  { value: "rust", label: "Rust" },
+  { value: "php", label: "PHP" },
+  { value: "ruby", label: "Ruby" },
+  { value: "swift", label: "Swift" },
+  { value: "kotlin", label: "Kotlin" },
+  { value: "sql", label: "SQL" },
+  { value: "flutter", label: "Flutter/Dart" },
+  { value: "html", label: "HTML/CSS" },
+  { value: "other", label: "Other" },
+] as const
+
+export const KEYBOARD_SHORTCUTS = [
+  { key: "CMD/CTRL + 2", action: "Activate microphone" },
+  { key: "CMD/CTRL + 3", action: "Capture PC audio" },
+  { key: "CMD/CTRL + 4", action: "Take screenshot" },
+  { key: "CMD/CTRL + 9", action: "Toggle app visibility" },
+  { key: "CMD/CTRL + TAB", action: "Clear input" },
+  { key: "CMD/CTRL + SPACE", action: "Submit request" },
+] as const
