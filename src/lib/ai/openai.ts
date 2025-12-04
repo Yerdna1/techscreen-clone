@@ -1,8 +1,14 @@
 import OpenAI from "openai"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
 
+// Use OpenRouter as the API provider
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+  defaultHeaders: {
+    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app",
+    "X-Title": "TechScreen AI",
+  },
 })
 
 const SYSTEM_PROMPT = `You are an expert programming assistant helping someone during a technical interview.
@@ -31,7 +37,7 @@ export async function generateAIResponse(
     : "Provide code examples in the most appropriate language."
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "anthropic/claude-sonnet-4", // Using Claude via OpenRouter
     messages: [
       {
         role: "system",
@@ -89,7 +95,7 @@ export async function generateAIResponseStream(
     : "Provide code examples in the most appropriate language."
 
   const stream = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "anthropic/claude-sonnet-4", // Using Claude via OpenRouter
     messages: [
       {
         role: "system",
