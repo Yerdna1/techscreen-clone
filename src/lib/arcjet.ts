@@ -1,8 +1,8 @@
 import arcjet, { shield, tokenBucket, detectBot } from "@arcjet/next"
 
+// Base arcjet instance for general API routes
 export const aj = arcjet({
   key: process.env.ARCJET_KEY!,
-  characteristics: ["ip.src"],
   rules: [
     // Shield protects against common attacks
     shield({
@@ -29,7 +29,6 @@ export const aj = arcjet({
 // Stricter rate limit for AI endpoints
 export const ajAI = arcjet({
   key: process.env.ARCJET_KEY!,
-  characteristics: ["ip.src"],
   rules: [
     shield({
       mode: "LIVE",

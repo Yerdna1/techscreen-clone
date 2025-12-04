@@ -7,7 +7,7 @@ import { aj } from "@/lib/arcjet"
 export async function GET(request: NextRequest) {
   try {
     // Arcjet protection
-    const decision = await aj.protect(request)
+    const decision = await aj.protect(request as unknown as Request)
 
     if (decision.isDenied()) {
       return NextResponse.json(
