@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
+  "/api/desktop(.*)",  // Public API for desktop Electron app
+  "/desktop(.*)",      // Desktop UI pages
 ])
 
 export default clerkMiddleware(async (auth, req) => {
