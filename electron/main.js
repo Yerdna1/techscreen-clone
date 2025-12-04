@@ -8,8 +8,45 @@ let mainWindow = null
 let tray = null
 let isVisible = true
 
-// App URL - change to production URL when deploying
-const APP_URL = process.env.APP_URL || 'http://localhost:3000'
+// App URL - using production Vercel URL
+const APP_URL = process.env.APP_URL || 'https://techscreen-clone.vercel.app'
+
+// Prevent multiple instances - must be called synchronously at startup
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (!isVisible) toggleVisibility()
+      mainWindow.focus()
+    }
+  })
+
+  // App lifecycle
+  app.whenReady().then(() => {
+    createWindow()
+    createTray()
+    registerGlobalShortcuts()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+      }
+    })
+  })
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
+  })
+
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
+  })
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -55,6 +92,9 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  // Open DevTools for debugging (remove in production)
+  // mainWindow.webContents.openDevTools({ mode: 'detach' })
 }
 
 function createTray() {
@@ -154,13 +194,13 @@ function registerGlobalShortcuts() {
     captureScreen()
   })
 
-  // Clear: CMD/CTRL + Tab
-  globalShortcut.register('CommandOrControl+Tab', () => {
+  // Clear: CMD/CTRL + Shift + C
+  globalShortcut.register('CommandOrControl+Shift+C', () => {
     mainWindow?.webContents.send('shortcut', 'clear')
   })
 
-  // Submit: CMD/CTRL + Space
-  globalShortcut.register('CommandOrControl+Space', () => {
+  // Submit: CMD/CTRL + Shift + Space
+  globalShortcut.register('CommandOrControl+Shift+Space', () => {
     mainWindow?.webContents.send('shortcut', 'submit')
   })
 }
@@ -200,40 +240,3 @@ ipcMain.on('set-always-on-top', (event, value) => {
 ipcMain.on('set-opacity', (event, value) => {
   mainWindow?.setOpacity(value)
 })
-
-// App lifecycle
-app.whenReady().then(() => {
-  createWindow()
-  createTray()
-  registerGlobalShortcuts()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
-  })
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-})
-
-// Prevent multiple instances
-const gotTheLock = app.requestSingleInstanceLock()
-
-if (!gotTheLock) {
-  app.quit()
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (!isVisible) toggleVisibility()
-      mainWindow.focus()
-    }
-  })
-}

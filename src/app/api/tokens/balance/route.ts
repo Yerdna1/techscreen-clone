@@ -1,10 +1,21 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { db, users } from "@/lib/db"
 import { eq } from "drizzle-orm"
+import { aj } from "@/lib/arcjet"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Arcjet protection
+    const decision = await aj.protect(request)
+
+    if (decision.isDenied()) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      )
+    }
+
     const { userId } = await auth()
 
     if (!userId) {

@@ -3,10 +3,33 @@ import { auth } from "@clerk/nextjs/server"
 import { generateAIResponse } from "@/lib/ai/openai"
 import { db, users, questions, tokenTransactions } from "@/lib/db"
 import { eq } from "drizzle-orm"
+import { ajAI } from "@/lib/arcjet"
 import type { ProgrammingLanguage, InputType } from "@/types"
 
 export async function POST(request: NextRequest) {
   try {
+    // Arcjet protection - rate limiting and bot detection
+    const decision = await ajAI.protect(request)
+
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        return NextResponse.json(
+          { error: "Too many requests. Please slow down." },
+          { status: 429 }
+        )
+      }
+      if (decision.reason.isBot()) {
+        return NextResponse.json(
+          { error: "Bot detected" },
+          { status: 403 }
+        )
+      }
+      return NextResponse.json(
+        { error: "Request blocked" },
+        { status: 403 }
+      )
+    }
+
     const { userId } = await auth()
 
     if (!userId) {
