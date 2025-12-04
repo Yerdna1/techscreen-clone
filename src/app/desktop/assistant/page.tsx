@@ -22,27 +22,34 @@ export default function DesktopAssistantPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [language, setLanguage] = useState<ProgrammingLanguage>("javascript")
 
+  const [error, setError] = useState<string | null>(null)
+
   const handleSubmit = useCallback(async () => {
     if (!question.trim()) return
 
     setIsLoading(true)
+    setError(null)
     try {
-      const res = await fetch("/api/ai/ask", {
+      // Use public desktop API endpoint (no auth required)
+      const res = await fetch("/api/desktop/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question,
           language,
-          inputType: "text",
         }),
       })
 
-      if (res.ok) {
-        const data = await res.json()
+      const data = await res.json()
+
+      if (res.ok && data.success) {
         setResponse(data.response)
+      } else {
+        setError(data.error || "Failed to get response")
       }
-    } catch (error) {
-      console.error("Error:", error)
+    } catch (err) {
+      console.error("Error:", err)
+      setError("Network error. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -51,6 +58,7 @@ export default function DesktopAssistantPage() {
   const handleClear = useCallback(() => {
     setQuestion("")
     setResponse(null)
+    setError(null)
   }, [])
 
   // Listen for Electron IPC events
@@ -224,6 +232,13 @@ export default function DesktopAssistantPage() {
                 {isLoading ? "Processing..." : "Submit"}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
 
