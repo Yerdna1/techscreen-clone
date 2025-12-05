@@ -19,6 +19,7 @@ export default function DownloadPage() {
       description: "For M1, M2, M3 Macs",
       badge: "Available",
       available: true,
+      size: "91 MB",
     },
     {
       platform: "macOS (Intel)",
@@ -28,15 +29,17 @@ export default function DownloadPage() {
       description: "For Intel-based Macs",
       badge: "Coming Soon",
       available: false,
+      size: null,
     },
     {
       platform: "Windows",
       icon: Monitor,
-      fileName: `TechScreen-AI-${VERSION}-Setup.exe`,
-      downloadUrl: null,
-      description: "Windows 10/11 64-bit",
-      badge: "Coming Soon",
-      available: false,
+      fileName: `TechScreen.AI.${VERSION}.exe`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI.${VERSION}.exe`,
+      description: "Windows 10/11 64-bit (Portable)",
+      badge: "Available",
+      available: true,
+      size: "72 MB",
     },
   ]
 
@@ -92,7 +95,7 @@ export default function DownloadPage() {
                 <Link href={download.downloadUrl} target="_blank">
                   <Button variant="gradient" className="w-full">
                     <Download className="h-4 w-4 mr-2" />
-                    Download (91 MB)
+                    Download{download.size ? ` (${download.size})` : ''}
                   </Button>
                 </Link>
               ) : (
@@ -106,23 +109,48 @@ export default function DownloadPage() {
       </div>
 
       {/* Installation Instructions */}
-      <Card className="border-violet-500/50 bg-violet-500/5">
-        <CardHeader>
-          <CardTitle>Installation Instructions (macOS)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li>Download the ZIP file above</li>
-            <li>Extract the ZIP to get <code className="bg-muted px-1 rounded">TechScreen AI.app</code></li>
-            <li>Move the app to your <code className="bg-muted px-1 rounded">Applications</code> folder</li>
-            <li>Right-click the app and select <strong>Open</strong> (required first time to bypass Gatekeeper)</li>
-            <li>Click <strong>Open</strong> in the security dialog</li>
-          </ol>
-          <p className="text-xs text-muted-foreground mt-2">
-            Note: The app is not code-signed. macOS will warn you about unidentified developer.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-violet-500/50 bg-violet-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Apple className="h-5 w-5" />
+              macOS Installation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li>Download the ZIP file above</li>
+              <li>Extract the ZIP to get <code className="bg-muted px-1 rounded">TechScreen AI.app</code></li>
+              <li>Move the app to your <code className="bg-muted px-1 rounded">Applications</code> folder</li>
+              <li>Right-click the app and select <strong>Open</strong> (required first time to bypass Gatekeeper)</li>
+              <li>Click <strong>Open</strong> in the security dialog</li>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-2">
+              Note: The app is not code-signed. macOS will warn you about unidentified developer.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-500/50 bg-blue-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5" />
+              Windows Installation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li>Download the EXE file above</li>
+              <li>The app is portable - no installation needed</li>
+              <li>Double-click the EXE to run</li>
+              <li>If Windows Defender warns you, click <strong>More info</strong> then <strong>Run anyway</strong></li>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-2">
+              Note: The app is not code-signed. Windows may show SmartScreen warning.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Build from Source */}
       <Card>
