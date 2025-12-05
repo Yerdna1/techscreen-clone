@@ -8,8 +8,13 @@ let mainWindow = null
 let tray = null
 let isVisible = true
 
-// App URL - using production Vercel URL
-const APP_URL = process.env.APP_URL || 'https://techscreen-clone.vercel.app'
+// App URL configuration
+// In production (packaged app): use Vercel deployment
+// In development: use local dev server
+const isDev = !app.isPackaged
+const APP_URL = isDev
+  ? (process.env.APP_URL || 'http://localhost:3000')
+  : 'https://techscreen-clone.vercel.app'
 
 // Prevent multiple instances - must be called synchronously at startup
 const gotTheLock = app.requestSingleInstanceLock()

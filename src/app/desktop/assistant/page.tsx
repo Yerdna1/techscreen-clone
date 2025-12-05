@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useUser, SignIn, UserButton } from "@clerk/nextjs"
+import { useUser, UserButton } from "@clerk/nextjs"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
+import { CustomSelect } from "@/components/ui/select"
 
 type InputStatus = "waiting" | "recording" | "processing"
 
@@ -473,81 +474,8 @@ export default function DesktopAssistantPage() {
     }
   }
 
-  // Show loading while Clerk initializes
-  if (!isLoaded) {
-    return (
-      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
-        <div
-          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        >
-          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
-            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
-            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show login screen if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
-        {/* Draggable Title Bar */}
-        <div
-          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        >
-          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
-            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
-            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
-          </div>
-        </div>
-
-        {/* Login Content - Embedded SignIn Component */}
-        <div
-          className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <SignIn
-            appearance={{
-              elements: {
-                rootBox: "w-full max-w-md",
-                card: "bg-[#252525] border border-[#3a3a3a] shadow-xl",
-                headerTitle: "text-white",
-                headerSubtitle: "text-gray-400",
-                socialButtonsBlockButton: "bg-[#3a3a3a] border-[#4a4a4a] text-white hover:bg-[#4a4a4a]",
-                formFieldLabel: "text-gray-300",
-                formFieldInput: "bg-[#1a1a1a] border-[#3a3a3a] text-white",
-                formButtonPrimary: "bg-violet-600 hover:bg-violet-700",
-                footerActionLink: "text-violet-400 hover:text-violet-300",
-                identityPreviewEditButton: "text-violet-400",
-                formFieldInputShowPasswordButton: "text-gray-400",
-              },
-            }}
-            routing="hash"
-            afterSignInUrl="/desktop/assistant"
-            signUpUrl="/sign-up"
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-center">
-          <span>CMD+9 to hide/show</span>
-        </div>
-      </div>
-    )
-  }
+  // Skip login check for now - allow anonymous access
+  // TODO: Re-enable login when Clerk auth is fixed for Electron
 
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
@@ -565,7 +493,7 @@ export default function DesktopAssistantPage() {
           {tokensRemaining !== null && (
             <span className="text-xs text-gray-400">{tokensRemaining} tokens</span>
           )}
-          <UserButton afterSignOutUrl="/desktop/assistant" />
+          {isSignedIn && <UserButton afterSignOutUrl="/desktop/assistant" />}
         </div>
       </div>
 
@@ -618,26 +546,28 @@ export default function DesktopAssistantPage() {
           </button>
         </div>
 
-        {/* Language Selector */}
-        <select
+        {/* Language Selector - Custom dropdown to stay hidden during screen share */}
+        <CustomSelect
           value={language}
-          onChange={(e) => setLanguage(e.target.value as ProgrammingLanguage)}
-          className="px-2 py-1 text-xs bg-[#3a3a3a] border border-[#4a4a4a] rounded text-gray-300 focus:outline-none focus:border-violet-500"
-        >
-          <option value="javascript">JavaScript</option>
-          <option value="typescript">TypeScript</option>
-          <option value="python">Python</option>
-          <option value="java">Java</option>
-          <option value="cpp">C++</option>
-          <option value="csharp">C#</option>
-          <option value="go">Go</option>
-          <option value="rust">Rust</option>
-          <option value="ruby">Ruby</option>
-          <option value="php">PHP</option>
-          <option value="swift">Swift</option>
-          <option value="kotlin">Kotlin</option>
-          <option value="sql">SQL</option>
-        </select>
+          onChange={(value) => setLanguage(value as ProgrammingLanguage)}
+          className="w-32"
+          variant="dark"
+          options={[
+            { value: "javascript", label: "JavaScript" },
+            { value: "typescript", label: "TypeScript" },
+            { value: "python", label: "Python" },
+            { value: "java", label: "Java" },
+            { value: "cpp", label: "C++" },
+            { value: "csharp", label: "C#" },
+            { value: "go", label: "Go" },
+            { value: "rust", label: "Rust" },
+            { value: "ruby", label: "Ruby" },
+            { value: "php", label: "PHP" },
+            { value: "swift", label: "Swift" },
+            { value: "kotlin", label: "Kotlin" },
+            { value: "sql", label: "SQL" },
+          ]}
+        />
       </div>
 
       {/* Second Status Bar - App Controls & AI Status */}
@@ -818,7 +748,7 @@ export default function DesktopAssistantPage() {
 
       {/* Footer Status */}
       <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-between">
-        <span>LiveHelpEasy - {user?.emailAddresses?.[0]?.emailAddress || "Signed In"}</span>
+        <span>LiveHelpEasy{isSignedIn && user?.emailAddresses?.[0]?.emailAddress ? ` - ${user.emailAddresses[0].emailAddress}` : ""}</span>
         <span>CMD+9 to hide/show</span>
       </div>
     </div>
