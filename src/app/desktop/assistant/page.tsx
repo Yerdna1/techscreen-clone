@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
+import { useUser, SignIn, UserButton } from "@clerk/nextjs"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
@@ -514,38 +514,31 @@ export default function DesktopAssistantPage() {
           </div>
         </div>
 
-        {/* Login Content */}
+        {/* Login Content - Embedded SignIn Component */}
         <div
-          className="flex-1 flex flex-col items-center justify-center p-8"
+          className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <div className="text-center space-y-6">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-              </div>
-            </div>
-            <h1 className="text-2xl font-bold text-white">LiveHelpEasy</h1>
-            <p className="text-gray-400 text-sm max-w-xs">
-              Sign in to access your invisible interview assistant. Your questions will be saved to your history.
-            </p>
-            <SignInButton mode="redirect" forceRedirectUrl="/desktop/assistant">
-              <button
-                className="px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium transition-colors cursor-pointer"
-                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-              >
-                Sign In to Continue
-              </button>
-            </SignInButton>
-            <p className="text-gray-500 text-xs">
-              Don&apos;t have an account?{" "}
-              <a href="/sign-up" className="text-violet-400 hover:text-violet-300">
-                Sign up
-              </a>
-            </p>
-          </div>
+          <SignIn
+            appearance={{
+              elements: {
+                rootBox: "w-full max-w-md",
+                card: "bg-[#252525] border border-[#3a3a3a] shadow-xl",
+                headerTitle: "text-white",
+                headerSubtitle: "text-gray-400",
+                socialButtonsBlockButton: "bg-[#3a3a3a] border-[#4a4a4a] text-white hover:bg-[#4a4a4a]",
+                formFieldLabel: "text-gray-300",
+                formFieldInput: "bg-[#1a1a1a] border-[#3a3a3a] text-white",
+                formButtonPrimary: "bg-violet-600 hover:bg-violet-700",
+                footerActionLink: "text-violet-400 hover:text-violet-300",
+                identityPreviewEditButton: "text-violet-400",
+                formFieldInputShowPasswordButton: "text-gray-400",
+              },
+            }}
+            routing="hash"
+            afterSignInUrl="/desktop/assistant"
+            signUpUrl="/sign-up"
+          />
         </div>
 
         {/* Footer */}
