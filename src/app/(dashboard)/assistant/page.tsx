@@ -18,7 +18,8 @@ export default function AssistantPage() {
         const response = await fetch("/api/billing")
         if (response.ok) {
           const data = await response.json()
-          setTokens(data.tokens ?? 0)
+          // Tokens are nested inside user object
+          setTokens(data.user?.tokens ?? 0)
         }
       } catch (error) {
         console.error("Failed to fetch tokens:", error)
