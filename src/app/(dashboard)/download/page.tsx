@@ -1,33 +1,42 @@
 "use client"
 
-import { Download, Apple, Monitor, Shield, Keyboard, Eye } from "lucide-react"
+import Link from "next/link"
+import { Download, Apple, Monitor, Shield, Keyboard, Eye, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
 export default function DownloadPage() {
   const GITHUB_REPO = "Yerdna1/techscreen-clone"
-  const VERSION = "1.0.0"
+  const VERSION = "0.1.0"
 
   const downloads = [
     {
       platform: "macOS (Apple Silicon)",
       icon: Apple,
-      fileName: `TechScreen-AI-${VERSION}-arm64.dmg`,
+      fileName: `TechScreen.AI-${VERSION}-arm64-mac.zip`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI-${VERSION}-arm64-mac.zip`,
       description: "For M1, M2, M3 Macs",
-      badge: "Recommended",
+      badge: "Available",
+      available: true,
     },
     {
       platform: "macOS (Intel)",
       icon: Apple,
-      fileName: `TechScreen-AI-${VERSION}-x64.dmg`,
+      fileName: `TechScreen-AI-${VERSION}-x64-mac.zip`,
+      downloadUrl: null,
       description: "For Intel-based Macs",
+      badge: "Coming Soon",
+      available: false,
     },
     {
       platform: "Windows",
       icon: Monitor,
       fileName: `TechScreen-AI-${VERSION}-Setup.exe`,
+      downloadUrl: null,
       description: "Windows 10/11 64-bit",
+      badge: "Coming Soon",
+      available: false,
     },
   ]
 
@@ -49,11 +58,6 @@ export default function DownloadPage() {
     },
   ]
 
-  const handleDownload = (fileName: string) => {
-    // For now, show instructions - in production, link to GitHub releases
-    alert(`To download the desktop app:\n\n1. Go to the GitHub repository\n2. Navigate to Releases\n3. Download ${fileName}\n\nNote: Desktop builds will be available in the next release.`)
-  }
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -72,7 +76,7 @@ export default function DownloadPage() {
         {downloads.map((download) => (
           <Card key={download.platform} className="relative">
             {download.badge && (
-              <Badge className="absolute -top-2 -right-2 bg-violet-500">
+              <Badge className={`absolute -top-2 -right-2 ${download.available ? 'bg-green-500' : 'bg-gray-500'}`}>
                 {download.badge}
               </Badge>
             )}
@@ -84,18 +88,41 @@ export default function DownloadPage() {
               <CardDescription>{download.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button
-                variant="gradient"
-                className="w-full"
-                onClick={() => handleDownload(download.fileName)}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
+              {download.available && download.downloadUrl ? (
+                <Link href={download.downloadUrl} target="_blank">
+                  <Button variant="gradient" className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download (91 MB)
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="outline" className="w-full" disabled>
+                  Coming Soon
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Installation Instructions */}
+      <Card className="border-violet-500/50 bg-violet-500/5">
+        <CardHeader>
+          <CardTitle>Installation Instructions (macOS)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <ol className="list-decimal list-inside space-y-2 text-sm">
+            <li>Download the ZIP file above</li>
+            <li>Extract the ZIP to get <code className="bg-muted px-1 rounded">TechScreen AI.app</code></li>
+            <li>Move the app to your <code className="bg-muted px-1 rounded">Applications</code> folder</li>
+            <li>Right-click the app and select <strong>Open</strong> (required first time to bypass Gatekeeper)</li>
+            <li>Click <strong>Open</strong> in the security dialog</li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-2">
+            Note: The app is not code-signed. macOS will warn you about unidentified developer.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Build from Source */}
       <Card>
