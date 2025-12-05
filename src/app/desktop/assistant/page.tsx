@@ -662,7 +662,7 @@ export default function DesktopAssistantPage() {
           >
             <span className="text-gray-300 text-xs font-medium">Clear:</span>
             <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
-              CTRL+TAB
+              CTRL+SHIFT+C
             </kbd>
           </button>
         </div>
@@ -678,7 +678,7 @@ export default function DesktopAssistantPage() {
             {isLoading ? "Processing..." : "Submit"}
           </span>
           <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
-            CTRL+SPACE
+            CTRL+SHIFT+SPACE
           </kbd>
         </button>
       </div>
@@ -720,7 +720,7 @@ export default function DesktopAssistantPage() {
             )}
 
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>CMD+SHIFT+SPACE submit | 2=mic | 3=PC audio | 4=screenshot | SHIFT+C clear</span>
+              <span>CTRL+SHIFT+SPACE submit | CTRL+2=mic | CTRL+3=PC | CTRL+4=screenshot</span>
               <button
                 onClick={handleSubmit}
                 disabled={isLoading || (!question.trim() && !screenshot)}
