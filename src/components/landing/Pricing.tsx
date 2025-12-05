@@ -36,6 +36,7 @@ export function Pricing() {
       })
 
       const data = await response.json()
+      console.log("Checkout response:", data)
 
       if (data.checkoutUrl) {
         if (data.checkoutUrl.startsWith("http")) {
@@ -44,7 +45,10 @@ export function Pricing() {
           router.push(data.checkoutUrl)
         }
       } else if (data.error) {
-        alert(data.error)
+        const errorMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error)
+        alert(errorMsg)
+      } else {
+        alert("Unexpected response from server. Please try again.")
       }
     } catch (error) {
       console.error("Checkout error:", error)
