@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Settings, Bell, Shield, Palette, User } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useUser, useClerk } from "@clerk/nextjs"
+import { Settings, Bell, Shield, Palette, User, Moon, Sun, Monitor } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -9,7 +11,28 @@ import { Switch } from "@/components/ui/switch"
 export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [marketingEmails, setMarketingEmails] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
+  const { theme, setTheme } = useTheme()
+  const { user } = useUser()
+  const { openUserProfile } = useClerk()
+
+  const handleOpenProfile = () => {
+    openUserProfile()
+  }
+
+  const handleEnable2FA = () => {
+    // Open user profile directly to the security section
+    openUserProfile({
+      appearance: {
+        elements: {
+          rootBox: "w-full"
+        }
+      }
+    })
+  }
+
+  const handleViewSessions = () => {
+    openUserProfile()
+  }
 
   return (
     <div className="space-y-6">
@@ -35,10 +58,74 @@ export default function SettingsPage() {
             Your profile is managed through Clerk authentication
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button variant="outline">
-            Manage Profile in Clerk
+        <CardContent className="space-y-4">
+          {user && (
+            <div className="flex items-center gap-4 mb-4">
+              {user.imageUrl && (
+                <img
+                  src={user.imageUrl}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full"
+                />
+              )}
+              <div>
+                <p className="font-medium">{user.fullName || user.firstName || "User"}</p>
+                <p className="text-sm text-muted-foreground">
+                  {user.primaryEmailAddress?.emailAddress}
+                </p>
+              </div>
+            </div>
+          )}
+          <Button variant="outline" onClick={handleOpenProfile}>
+            Manage Profile
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-violet-500" />
+            Appearance
+          </CardTitle>
+          <CardDescription>
+            Customize the look and feel
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="font-medium mb-3">Theme</p>
+            <div className="flex gap-2">
+              <Button
+                variant={theme === "light" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("light")}
+                className="flex items-center gap-2"
+              >
+                <Sun className="h-4 w-4" />
+                Light
+              </Button>
+              <Button
+                variant={theme === "dark" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("dark")}
+                className="flex items-center gap-2"
+              >
+                <Moon className="h-4 w-4" />
+                Dark
+              </Button>
+              <Button
+                variant={theme === "system" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTheme("system")}
+                className="flex items-center gap-2"
+              >
+                <Monitor className="h-4 w-4" />
+                System
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -81,33 +168,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Appearance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-violet-500" />
-            Appearance
-          </CardTitle>
-          <CardDescription>
-            Customize the look and feel
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Dark Mode</p>
-              <p className="text-sm text-muted-foreground">
-                Use dark theme throughout the app
-              </p>
-            </div>
-            <Switch
-              checked={darkMode}
-              onCheckedChange={setDarkMode}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Security */}
       <Card>
         <CardHeader>
@@ -124,11 +184,11 @@ export default function SettingsPage() {
             <div>
               <p className="font-medium">Two-Factor Authentication</p>
               <p className="text-sm text-muted-foreground">
-                Add an extra layer of security
+                Add an extra layer of security to your account
               </p>
             </div>
-            <Button variant="outline" size="sm">
-              Enable
+            <Button variant="outline" size="sm" onClick={handleEnable2FA}>
+              Configure
             </Button>
           </div>
           <div className="flex items-center justify-between">
@@ -138,8 +198,19 @@ export default function SettingsPage() {
                 Manage your active login sessions
               </p>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleViewSessions}>
               View
+            </Button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Password & Authentication</p>
+              <p className="text-sm text-muted-foreground">
+                Update your password and authentication methods
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleOpenProfile}>
+              Manage
             </Button>
           </div>
         </CardContent>
@@ -154,7 +225,7 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive">
+          <Button variant="destructive" onClick={handleOpenProfile}>
             Delete Account
           </Button>
         </CardContent>
