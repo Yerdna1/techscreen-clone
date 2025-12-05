@@ -502,7 +502,7 @@ export default function DesktopAssistantPage() {
             <p className="text-gray-400 text-sm max-w-xs">
               Sign in to access your invisible interview assistant. Your questions will be saved to your history.
             </p>
-            <SignInButton mode="modal">
+            <SignInButton mode="modal" forceRedirectUrl="/desktop/assistant">
               <button className="px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium transition-colors">
                 Sign In to Continue
               </button>

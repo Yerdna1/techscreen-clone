@@ -113,6 +113,41 @@ function createWindow() {
     mainWindow = null
   })
 
+  // Prevent navigation away from desktop assistant
+  // Allow Clerk auth URLs but redirect back after
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const parsedUrl = new URL(url)
+    const allowedPaths = ['/desktop/assistant', '/sign-in', '/sign-up']
+    const isClerkAuth = parsedUrl.hostname.includes('clerk')
+
+    // Allow Clerk authentication popups/redirects
+    if (isClerkAuth) {
+      return
+    }
+
+    // Allow navigation to allowed paths
+    if (allowedPaths.some(path => parsedUrl.pathname.startsWith(path))) {
+      return
+    }
+
+    // Block navigation to other pages, redirect back to desktop assistant
+    event.preventDefault()
+    mainWindow.loadURL(`${APP_URL}/desktop/assistant`)
+  })
+
+  // Also handle did-navigate for after-the-fact redirects
+  mainWindow.webContents.on('did-navigate', (event, url) => {
+    const parsedUrl = new URL(url)
+    const isDesktopAssistant = parsedUrl.pathname === '/desktop/assistant' || parsedUrl.pathname.startsWith('/desktop/assistant')
+    const isAuthPage = parsedUrl.pathname.startsWith('/sign-in') || parsedUrl.pathname.startsWith('/sign-up')
+    const isClerkAuth = parsedUrl.hostname.includes('clerk')
+
+    // If we ended up somewhere other than desktop assistant or auth, go back
+    if (!isDesktopAssistant && !isAuthPage && !isClerkAuth) {
+      mainWindow.loadURL(`${APP_URL}/desktop/assistant`)
+    }
+  })
+
   // Open DevTools for debugging (remove in production)
   // mainWindow.webContents.openDevTools({ mode: 'detach' })
 }
