@@ -57,8 +57,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const polarOrgId = process.env.NEXT_PUBLIC_POLAR_ORG_ID
+    // Use sandbox org ID if in sandbox mode, otherwise use live org ID
+    const polarOrgId = isSandbox
+      ? (process.env.POLAR_ORG_ID_SANDBOX || process.env.NEXT_PUBLIC_POLAR_ORG_ID)
+      : process.env.NEXT_PUBLIC_POLAR_ORG_ID
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app"
+
+    console.log("Checkout - Config:", { isSandbox, polarOrgId, hasToken: !!polarToken })
 
     // First, check if user already has an ACTIVE subscription in Polar
     // Look up customer by clerk_id

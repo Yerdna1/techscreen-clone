@@ -31,11 +31,23 @@ export async function POST() {
     const polarToken = isSandbox
       ? process.env.POLAR_ACCESS_TOKEN_SANDBOX
       : process.env.POLAR_ACCESS_TOKEN
-    const polarOrgId = process.env.NEXT_PUBLIC_POLAR_ORG_ID
+    // Use sandbox org ID if in sandbox mode, otherwise use live org ID
+    const polarOrgId = isSandbox
+      ? (process.env.POLAR_ORG_ID_SANDBOX || process.env.NEXT_PUBLIC_POLAR_ORG_ID)
+      : process.env.NEXT_PUBLIC_POLAR_ORG_ID
 
-    if (!polarToken || !polarOrgId) {
-      return NextResponse.json({ error: "Polar not configured" }, { status: 500 })
+    if (!polarToken) {
+      return NextResponse.json({ error: "Polar token not configured" }, { status: 500 })
     }
+
+    if (!polarOrgId) {
+      return NextResponse.json({
+        error: "Polar organization ID not configured",
+        hint: isSandbox ? "Set POLAR_ORG_ID_SANDBOX for sandbox mode" : "Set NEXT_PUBLIC_POLAR_ORG_ID"
+      }, { status: 500 })
+    }
+
+    console.log("Sync - Config:", { isSandbox, polarOrgId, hasToken: !!polarToken })
 
     // Look up customer in Polar by clerk_id metadata
     const customersApiUrl = isSandbox
