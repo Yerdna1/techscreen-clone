@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "TechScreen AI - Your Invisible Interview Assistant",
+  title: "LiveHelpEasy - Your Invisible Interview Assistant",
   description:
     "AI-powered interview assistant that helps you ace technical interviews with real-time assistance. Get instant, accurate answers to coding questions.",
   keywords: [
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     "programming help",
     "code assistance",
   ],
-  authors: [{ name: "TechScreen AI" }],
+  authors: [{ name: "LiveHelpEasy" }],
   openGraph: {
-    title: "TechScreen AI - Your Invisible Interview Assistant",
+    title: "LiveHelpEasy - Your Invisible Interview Assistant",
     description: "AI-powered interview assistant for technical interviews",
     type: "website",
   },

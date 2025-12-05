@@ -3,7 +3,7 @@ import { Pricing } from "@/components/landing/Pricing"
 import { Footer } from "@/components/landing/Footer"
 
 export const metadata = {
-  title: "Pricing - TechScreen AI",
+  title: "Pricing - LiveHelpEasy",
   description: "Choose the plan that fits your interview preparation needs",
 }
 

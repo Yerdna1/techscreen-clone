@@ -158,7 +158,7 @@ function createTray() {
     },
   ])
 
-  tray.setToolTip('TechScreen AI')
+  tray.setToolTip('LiveHelpEasy')
   tray.setContextMenu(contextMenu)
 
   tray.on('click', () => {

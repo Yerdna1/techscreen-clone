@@ -7,7 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   defaultHeaders: {
     "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app",
-    "X-Title": "TechScreen AI",
+    "X-Title": "LiveHelpEasy",
   },
 })
 
