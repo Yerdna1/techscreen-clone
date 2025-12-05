@@ -16,22 +16,25 @@ export default function BillingPage() {
 
   const plans = [
     {
+      id: "free",
       name: "Free",
       price: "$0",
-      tokens: "3 tokens/month",
+      tokens: "5 tokens",
       current: billing.plan === "free",
     },
     {
-      name: "Pro",
-      price: "$19/mo",
-      tokens: "100 tokens/month",
-      current: billing.plan === "pro",
+      id: "professional",
+      name: "Professional",
+      price: "$149/mo",
+      tokens: "200 tokens/month",
+      current: billing.plan === "professional",
       popular: true,
     },
     {
+      id: "enterprise",
       name: "Enterprise",
-      price: "$49/mo",
-      tokens: "Unlimited",
+      price: "$199/mo",
+      tokens: "500 tokens/month",
       current: billing.plan === "enterprise",
     },
   ]

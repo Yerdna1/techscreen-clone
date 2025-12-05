@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     const productId = POLAR_PRODUCTS[planId]
 
     if (!productId) {
+      console.error("Product ID not found for plan:", planId, "Available:", POLAR_PRODUCTS)
       return NextResponse.json(
         { error: "Plan not configured. Please contact support." },
         { status: 400 }
@@ -37,9 +38,8 @@ export async function POST(request: NextRequest) {
     }
 
     const polarToken = process.env.POLAR_ACCESS_TOKEN
-    const polarOrgId = process.env.NEXT_PUBLIC_POLAR_ORG_ID
 
-    if (!polarToken || !polarOrgId) {
+    if (!polarToken) {
       // Polar not configured - redirect to contact/waitlist
       return NextResponse.json({
         success: true,
@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create Polar checkout session
-    const response = await fetch("https://api.polar.sh/api/v1/checkouts/custom", {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app"
+
+    // Create Polar checkout session using the v1 API
+    const response = await fetch("https://api.polar.sh/v1/checkouts/", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${polarToken}`,
@@ -57,23 +59,34 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         product_id: productId,
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing?success=true`,
-        metadata: {
+        success_url: `${appUrl}/settings/billing?success=true`,
+        customer_metadata: {
           clerk_id: userId,
         },
       }),
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      console.error("Polar checkout error:", error)
+      const errorText = await response.text()
+      console.error("Polar checkout error:", response.status, errorText)
+
+      // Try to parse the error for more details
+      let errorMessage = "Failed to create checkout session"
+      try {
+        const errorJson = JSON.parse(errorText)
+        errorMessage = errorJson.detail || errorJson.message || errorMessage
+      } catch {
+        // Use default message
+      }
+
       return NextResponse.json(
-        { error: "Failed to create checkout session" },
+        { error: errorMessage },
         { status: 500 }
       )
     }
 
     const checkout = await response.json()
+    console.log("Polar checkout created:", checkout.id)
 
     return NextResponse.json({
       success: true,
