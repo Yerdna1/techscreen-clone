@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   "/pricing",
   "/changelog",
   "/faq",
+  "/download",         // Download page for desktop app
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",

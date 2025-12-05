@@ -83,6 +83,18 @@ export const tokenTransactions = pgTable("token_transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
+// API Keys table for desktop app authentication
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull().default("Desktop App"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
 // Type exports for use in application
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -92,3 +104,5 @@ export type Subscription = typeof subscriptions.$inferSelect
 export type NewSubscription = typeof subscriptions.$inferInsert
 export type TokenTransaction = typeof tokenTransactions.$inferSelect
 export type NewTokenTransaction = typeof tokenTransactions.$inferInsert
+export type ApiKey = typeof apiKeys.$inferSelect
+export type NewApiKey = typeof apiKeys.$inferInsert

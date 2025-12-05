@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run build:*)",
+      "Bash(cat:*)",
+      "Bash(npm run build:mac:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh release list:*)",
+      "Bash(git restore:*)",
+      "Bash(gh api:*)",
+      "Bash(curl:*)",
+      "Bash(gh release delete:*)",
+      "Bash(gh release create:*)",
+      "Bash(/Volumes/DATA/Python/ScreenShare_Test/techscreen-clone/electron/dist/LiveHelpEasy-0.2.0-arm64-mac.zip )",
+      "Bash(/Volumes/DATA/Python/ScreenShare_Test/techscreen-clone/electron/dist/LiveHelpEasy-0.2.0-mac.zip )",
+      "Bash(dist/LiveHelpEasy-0.2.1-arm64-mac.zip )",
+      "Bash(dist/LiveHelpEasy-0.2.1-mac.zip )",
+      "Bash(vercel:*)",
+      "Bash(echo:*)",
+      "Bash(npx drizzle-kit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

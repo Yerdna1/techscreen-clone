@@ -2,11 +2,39 @@ import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { generateAIResponse, generateVisionAIResponse } from "@/lib/ai/openai"
 import { ajAI } from "@/lib/arcjet"
-import { db, users, questions } from "@/lib/db"
+import { db, users, questions, apiKeys } from "@/lib/db"
 import { eq } from "drizzle-orm"
 import type { ProgrammingLanguage } from "@/types"
 
-// Desktop API endpoint - requires Clerk auth
+// Helper function to get user from API key
+async function getUserFromApiKey(apiKey: string) {
+  const [keyRecord] = await db
+    .select()
+    .from(apiKeys)
+    .where(eq(apiKeys.key, apiKey))
+    .limit(1)
+
+  if (!keyRecord) {
+    return null
+  }
+
+  // Update last used timestamp
+  await db
+    .update(apiKeys)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(apiKeys.id, keyRecord.id))
+
+  // Get the user
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, keyRecord.userId))
+    .limit(1)
+
+  return user
+}
+
+// Desktop API endpoint - supports Clerk auth OR API key auth
 // Saves questions to history for authenticated users
 export async function POST(req: Request) {
   try {
@@ -20,21 +48,51 @@ export async function POST(req: Request) {
       )
     }
 
-    // Require authentication
-    const { userId: clerkId } = await auth()
-
-    if (!clerkId) {
-      return NextResponse.json(
-        { error: "Please sign in to use the assistant" },
-        { status: 401 }
-      )
-    }
-
     const body = await req.json()
-    const { question, language, screenshot } = body as {
+    const { question, language, screenshot, apiKey } = body as {
       question: string
       language: ProgrammingLanguage
       screenshot?: string // Base64 image data
+      apiKey?: string // API key for desktop app auth
+    }
+
+    let user = null
+
+    // Try API key auth first (for desktop app)
+    if (apiKey) {
+      user = await getUserFromApiKey(apiKey)
+      if (!user) {
+        return NextResponse.json(
+          { error: "Invalid API key. Please check your key or generate a new one." },
+          { status: 401 }
+        )
+      }
+    } else {
+      // Fall back to Clerk auth
+      const { userId: clerkId } = await auth()
+
+      if (!clerkId) {
+        return NextResponse.json(
+          { error: "Please provide an API key or sign in to use the assistant" },
+          { status: 401 }
+        )
+      }
+
+      // Get user from database
+      const [dbUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.clerkId, clerkId))
+        .limit(1)
+
+      user = dbUser
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found. Please sign out and sign in again." },
+        { status: 404 }
+      )
     }
 
     // If we have a screenshot, use vision AI even without a question
@@ -42,20 +100,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Question or screenshot is required" },
         { status: 400 }
-      )
-    }
-
-    // Get user from database
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, clerkId))
-      .limit(1)
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found. Please sign out and sign in again." },
-        { status: 404 }
       )
     }
 

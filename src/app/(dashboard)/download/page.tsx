@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 
 export default function DownloadPage() {
   const GITHUB_REPO = "Yerdna1/techscreen-clone"
-  const VERSION = "0.1.0"
+  const VERSION = "0.3.0"
 
   const downloads = [
     {

@@ -15,6 +15,13 @@ interface StatusIndicator {
   screenshot: InputStatus
 }
 
+interface UserInfo {
+  email: string
+  name: string | null
+  tokens: number
+  subscriptionTier: string
+}
+
 export default function DesktopAssistantPage() {
   const { isSignedIn, isLoaded, user } = useUser()
   const [status, setStatus] = useState<StatusIndicator>({
@@ -30,9 +37,68 @@ export default function DesktopAssistantPage() {
   const [screenshot, setScreenshot] = useState<string | null>(null) // Base64 image data
   const [tokensRemaining, setTokensRemaining] = useState<number | null>(null)
 
+  // API Key authentication state
+  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [apiKeyInput, setApiKeyInput] = useState("")
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null)
+  const [isValidatingKey, setIsValidatingKey] = useState(false)
+  const [apiKeyUser, setApiKeyUser] = useState<UserInfo | null>(null)
+
   // Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  // Load saved API key from localStorage on mount
+  useEffect(() => {
+    const savedKey = localStorage.getItem("lhe_api_key")
+    if (savedKey) {
+      validateAndSetApiKey(savedKey)
+    }
+  }, [])
+
+  // Validate API key
+  const validateAndSetApiKey = async (key: string) => {
+    setIsValidatingKey(true)
+    setApiKeyError(null)
+    try {
+      const res = await fetch("/api/desktop/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key }),
+      })
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        setApiKey(key)
+        setApiKeyUser(data.user)
+        setTokensRemaining(data.user.tokens)
+        localStorage.setItem("lhe_api_key", key)
+      } else {
+        setApiKeyError(data.error || "Invalid API key")
+        localStorage.removeItem("lhe_api_key")
+      }
+    } catch (err) {
+      setApiKeyError("Failed to validate API key")
+    } finally {
+      setIsValidatingKey(false)
+    }
+  }
+
+  // Handle API key submission
+  const handleApiKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (apiKeyInput.trim()) {
+      validateAndSetApiKey(apiKeyInput.trim())
+    }
+  }
+
+  // Logout (clear API key)
+  const handleLogout = () => {
+    setApiKey(null)
+    setApiKeyUser(null)
+    setApiKeyInput("")
+    localStorage.removeItem("lhe_api_key")
+  }
 
   // PC Audio (system audio) recording refs
   const pcAudioRecorderRef = useRef<MediaRecorder | null>(null)
@@ -42,6 +108,12 @@ export default function DesktopAssistantPage() {
   const handleSubmit = useCallback(async () => {
     // Allow submit if we have a question OR a screenshot
     if (!question.trim() && !screenshot) return
+
+    // Require API key authentication
+    if (!apiKey && !isSignedIn) {
+      setError("Please enter your API key to use the assistant")
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -53,6 +125,7 @@ export default function DesktopAssistantPage() {
           question,
           language,
           screenshot, // Include screenshot for vision AI
+          apiKey, // Include API key for auth
         }),
       })
 
@@ -72,7 +145,7 @@ export default function DesktopAssistantPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [question, language, screenshot])
+  }, [question, language, screenshot, apiKey, isSignedIn])
 
   const handleClear = useCallback(() => {
     setQuestion("")
@@ -474,7 +547,107 @@ export default function DesktopAssistantPage() {
     }
   }
 
-  // No login required - allow anonymous access to desktop app
+  // Check if user is authenticated (either via Clerk or API key)
+  const isAuthenticated = isSignedIn || apiKey
+
+  // Show API key input screen if not authenticated
+  if (!isAuthenticated && !isValidatingKey) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        {/* Draggable Title Bar */}
+        <div
+          className="h-8 flex items-center justify-between bg-[#2a2a2a] border-b border-[#3a3a3a] px-3"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
+          </div>
+          <span className="text-xs text-gray-500">LiveHelpEasy</span>
+        </div>
+
+        {/* API Key Login Form */}
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm space-y-6">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-violet-600 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <h1 className="text-xl font-bold text-gray-200">Enter API Key</h1>
+              <p className="text-sm text-gray-400 mt-2">
+                Get your API key from the web dashboard at Settings &gt; API Keys
+              </p>
+            </div>
+
+            <form onSubmit={handleApiKeySubmit} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="lhe_xxxxxxxxxxxxxxxx"
+                  className="w-full px-4 py-3 bg-[#252525] border border-[#3a3a3a] rounded-lg text-gray-200 text-sm focus:outline-none focus:border-violet-500 placeholder-gray-500"
+                  autoFocus
+                />
+              </div>
+
+              {apiKeyError && (
+                <p className="text-sm text-red-400">{apiKeyError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={!apiKeyInput.trim()}
+                className="w-full py-3 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+              >
+                Connect
+              </button>
+            </form>
+
+            <p className="text-xs text-center text-gray-500">
+              Don&apos;t have an API key?{" "}
+              <a
+                href="https://techscreen-clone.vercel.app/settings"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet-400 hover:underline"
+              >
+                Get one here
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading while validating API key
+  if (isValidatingKey) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        <div
+          className="h-8 flex items-center justify-between bg-[#2a2a2a] border-b border-[#3a3a3a] px-3"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
@@ -493,6 +666,15 @@ export default function DesktopAssistantPage() {
             <span className="text-xs text-gray-400">{tokensRemaining} tokens</span>
           )}
           {isSignedIn && <UserButton afterSignOutUrl="/desktop/assistant" />}
+          {apiKey && !isSignedIn && (
+            <button
+              onClick={handleLogout}
+              className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              title="Logout"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
 
@@ -747,7 +929,11 @@ export default function DesktopAssistantPage() {
 
       {/* Footer Status */}
       <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-between">
-        <span>LiveHelpEasy{isSignedIn && user?.emailAddresses?.[0]?.emailAddress ? ` - ${user.emailAddresses[0].emailAddress}` : ""}</span>
+        <span>
+          LiveHelpEasy
+          {isSignedIn && user?.emailAddresses?.[0]?.emailAddress && ` - ${user.emailAddresses[0].emailAddress}`}
+          {!isSignedIn && apiKeyUser?.email && ` - ${apiKeyUser.email}`}
+        </span>
         <span>CMD+9 to hide/show</span>
       </div>
     </div>
