@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 
 // Polar product IDs - Configure these after creating products in Polar
+// Uses sandbox or live products based on POLAR_SANDBOX env var
+const isSandbox = process.env.POLAR_SANDBOX === "true"
+
 const POLAR_PRODUCTS: Record<string, string> = {
-  professional: process.env.POLAR_PRODUCT_PROFESSIONAL || "",
-  enterprise: process.env.POLAR_PRODUCT_ENTERPRISE || "",
+  professional: isSandbox
+    ? (process.env.POLAR_PRODUCT_PROFESSIONAL_SANDBOX || "")
+    : (process.env.POLAR_PRODUCT_PROFESSIONAL || ""),
+  enterprise: isSandbox
+    ? (process.env.POLAR_PRODUCT_ENTERPRISE_SANDBOX || "")
+    : (process.env.POLAR_PRODUCT_ENTERPRISE || ""),
 }
 
 export async function POST(request: NextRequest) {
@@ -37,7 +44,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const polarToken = process.env.POLAR_ACCESS_TOKEN
+    const polarToken = isSandbox
+      ? process.env.POLAR_ACCESS_TOKEN_SANDBOX
+      : process.env.POLAR_ACCESS_TOKEN
 
     if (!polarToken) {
       // Polar not configured - redirect to contact/waitlist
