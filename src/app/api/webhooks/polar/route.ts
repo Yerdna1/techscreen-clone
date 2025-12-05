@@ -4,19 +4,32 @@ import { eq } from "drizzle-orm"
 import { PRICING_PLANS } from "@/config/pricing"
 import type { SubscriptionTier } from "@/types"
 
-// Polar webhook types
+// Polar webhook types - supports multiple event structures
 interface PolarWebhookEvent {
   type: string
   data: {
     id: string
-    customer_id: string
-    product_id: string
+    customer_id?: string
+    product_id?: string
+    product?: {
+      id: string
+    }
     status: string
-    current_period_start: string
-    current_period_end: string
+    current_period_start?: string
+    current_period_end?: string
+    started_at?: string
+    ended_at?: string
     metadata?: {
       user_id?: string
       clerk_id?: string
+    }
+    customer_metadata?: {
+      clerk_id?: string
+    }
+    customer?: {
+      metadata?: {
+        clerk_id?: string
+      }
     }
   }
 }
@@ -36,14 +49,28 @@ export async function POST(request: NextRequest) {
 
     const event: PolarWebhookEvent = await request.json()
 
+    console.log("Polar webhook received:", event.type, JSON.stringify(event.data, null, 2))
+
     switch (event.type) {
       case "subscription.created":
-      case "subscription.updated": {
-        const { id, customer_id, status, current_period_start, current_period_end, metadata } = event.data
+      case "subscription.updated":
+      case "subscription.active": {
+        const { id, status } = event.data
 
-        const clerkId = metadata?.clerk_id
+        // Get product ID from either format
+        const productId = event.data.product_id || event.data.product?.id
+
+        // Get period dates from either format
+        const periodStart = event.data.current_period_start || event.data.started_at
+        const periodEnd = event.data.current_period_end || event.data.ended_at
+
+        // Look for clerk_id in multiple places
+        const clerkId = event.data.metadata?.clerk_id ||
+                        event.data.customer_metadata?.clerk_id ||
+                        event.data.customer?.metadata?.clerk_id
+
         if (!clerkId) {
-          console.error("No clerk_id in subscription metadata")
+          console.error("No clerk_id in subscription data:", event.data)
           return NextResponse.json({ error: "Missing clerk_id" }, { status: 400 })
         }
 
@@ -59,10 +86,11 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "User not found" }, { status: 404 })
         }
 
-        // Determine plan tier based on product ID or price
-        // This should be configured based on your Polar product IDs
-        const plan = determinePlanFromProductId(event.data.product_id)
+        // Determine plan tier based on product ID
+        const plan = productId ? determinePlanFromProductId(productId) : "free"
         const planConfig = PRICING_PLANS.find((p) => p.id === plan)
+
+        console.log("Processing subscription:", { id, status, productId, plan, clerkId })
 
         // Update or create subscription
         const existingSubscription = await db
@@ -71,14 +99,18 @@ export async function POST(request: NextRequest) {
           .where(eq(subscriptions.polarSubscriptionId, id))
           .limit(1)
 
+        // Use sensible defaults for dates if not provided
+        const startDate = periodStart ? new Date(periodStart) : new Date()
+        const endDate = periodEnd ? new Date(periodEnd) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
         if (existingSubscription.length > 0) {
           await db
             .update(subscriptions)
             .set({
               status: status as "active" | "cancelled" | "past_due",
               plan,
-              currentPeriodStart: new Date(current_period_start),
-              currentPeriodEnd: new Date(current_period_end),
+              currentPeriodStart: startDate,
+              currentPeriodEnd: endDate,
               updatedAt: new Date(),
             })
             .where(eq(subscriptions.polarSubscriptionId, id))
@@ -88,8 +120,8 @@ export async function POST(request: NextRequest) {
             polarSubscriptionId: id,
             plan,
             status: status as "active" | "cancelled" | "past_due",
-            currentPeriodStart: new Date(current_period_start),
-            currentPeriodEnd: new Date(current_period_end),
+            currentPeriodStart: startDate,
+            currentPeriodEnd: endDate,
           })
         }
 
