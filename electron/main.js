@@ -63,6 +63,8 @@ function createWindow() {
     resizable: true,
     hasShadow: false,
     focusable: true,
+    // macOS: ensure window accepts mouse events properly
+    acceptFirstMouse: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -77,8 +79,9 @@ function createWindow() {
   // macOS specific: Make visible on all workspaces and stay on top
   if (process.platform === 'darwin') {
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    // Use 'floating' level for better focus behavior while staying on top
-    mainWindow.setAlwaysOnTop(true, 'floating', 1)
+    // Use 'normal' level to ensure proper input handling
+    // 'floating' level can cause click-through issues with form inputs
+    mainWindow.setAlwaysOnTop(true, 'normal', 1)
   }
 
   // Windows specific
@@ -103,7 +106,7 @@ function createWindow() {
   mainWindow.on('focus', () => {
     // Ensure it stays on top when focused
     if (process.platform === 'darwin') {
-      mainWindow.setAlwaysOnTop(true, 'floating', 1)
+      mainWindow.setAlwaysOnTop(true, 'normal', 1)
     } else {
       mainWindow.setAlwaysOnTop(true, 'screen-saver')
     }
@@ -226,7 +229,7 @@ function toggleVisibility() {
     mainWindow.focus()
     // Ensure always on top after showing
     if (process.platform === 'darwin') {
-      mainWindow.setAlwaysOnTop(true, 'floating', 1)
+      mainWindow.setAlwaysOnTop(true, 'normal', 1)
     } else {
       mainWindow.setAlwaysOnTop(true, 'screen-saver')
     }
