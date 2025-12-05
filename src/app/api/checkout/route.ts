@@ -57,13 +57,132 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const polarOrgId = process.env.NEXT_PUBLIC_POLAR_ORG_ID
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app"
 
-    // Create Polar checkout session using the v1 API
-    // Use sandbox-api.polar.sh for testing, api.polar.sh for production
-    const polarApiUrl = process.env.POLAR_SANDBOX === "true"
+    // First, check if user already has an ACTIVE subscription in Polar
+    // Look up customer by clerk_id
+    const customersApiUrl = isSandbox
+      ? `https://sandbox-api.polar.sh/v1/customers?organization_id=${polarOrgId}&metadata[clerk_id]=${userId}`
+      : `https://api.polar.sh/v1/customers?organization_id=${polarOrgId}&metadata[clerk_id]=${userId}`
+
+    let existingCustomerId: string | null = null
+    let hasActiveSubscription = false
+
+    try {
+      const customersResponse = await fetch(customersApiUrl, {
+        headers: {
+          "Authorization": `Bearer ${polarToken}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (customersResponse.ok) {
+        const customersData = await customersResponse.json()
+        console.log("Checkout - Customer lookup:", JSON.stringify(customersData, null, 2))
+
+        if (customersData.items && customersData.items.length > 0) {
+          existingCustomerId = customersData.items[0].id
+
+          // Check if this customer has any ACTIVE subscriptions
+          const subscriptionsApiUrl = isSandbox
+            ? `https://sandbox-api.polar.sh/v1/subscriptions?organization_id=${polarOrgId}&customer_id=${existingCustomerId}`
+            : `https://api.polar.sh/v1/subscriptions?organization_id=${polarOrgId}&customer_id=${existingCustomerId}`
+
+          const subscriptionsResponse = await fetch(subscriptionsApiUrl, {
+            headers: {
+              "Authorization": `Bearer ${polarToken}`,
+              "Content-Type": "application/json",
+            },
+          })
+
+          if (subscriptionsResponse.ok) {
+            const subscriptionsData = await subscriptionsResponse.json()
+            console.log("Checkout - Subscriptions lookup:", JSON.stringify(subscriptionsData, null, 2))
+
+            // Check for any active subscription
+            const activeSubscription = subscriptionsData.items?.find(
+              (sub: { status: string }) => sub.status === "active"
+            )
+
+            if (activeSubscription) {
+              hasActiveSubscription = true
+              console.log("Checkout - User has active subscription:", activeSubscription.id)
+            } else {
+              console.log("Checkout - No active subscription found (may have cancelled/expired ones)")
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error checking existing subscriptions:", err)
+      // Continue with checkout attempt
+    }
+
+    // If user has an active subscription, redirect to portal to manage it
+    if (hasActiveSubscription && existingCustomerId) {
+      const portalApiUrl = isSandbox
+        ? "https://sandbox-api.polar.sh/v1/customer-portal/sessions"
+        : "https://api.polar.sh/v1/customer-portal/sessions"
+
+      try {
+        const portalResponse = await fetch(portalApiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${polarToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customer_id: existingCustomerId,
+          }),
+        })
+
+        if (portalResponse.ok) {
+          const portalSession = await portalResponse.json()
+          console.log("Checkout - Portal session created:", portalSession)
+          return NextResponse.json({
+            success: true,
+            checkoutUrl: portalSession.customer_portal_url,
+            message: "You have an active subscription. Redirecting to manage it...",
+          })
+        }
+      } catch (portalErr) {
+        console.error("Portal session error:", portalErr)
+      }
+
+      // Fallback to Polar portal
+      const polarOrgSlug = "PT-yerdna"
+      const polarPortalUrl = isSandbox
+        ? `https://sandbox.polar.sh/${polarOrgSlug}/portal`
+        : `https://polar.sh/${polarOrgSlug}/portal`
+
+      return NextResponse.json({
+        success: true,
+        checkoutUrl: polarPortalUrl,
+        message: "You have an active subscription. Manage it in the Polar portal.",
+      })
+    }
+
+    // No active subscription - create a new checkout
+    const polarApiUrl = isSandbox
       ? "https://sandbox-api.polar.sh/v1/checkouts/"
       : "https://api.polar.sh/v1/checkouts/"
+
+    const checkoutBody: Record<string, unknown> = {
+      product_id: productId,
+      success_url: `${appUrl}/settings/billing?success=true`,
+      customer_metadata: {
+        clerk_id: userId,
+      },
+    }
+
+    // If we have an existing customer ID, use it for the checkout
+    // This allows re-subscribing with the same customer
+    if (existingCustomerId) {
+      checkoutBody.customer_id = existingCustomerId
+    }
+
+    console.log("Checkout - Creating checkout:", JSON.stringify(checkoutBody, null, 2))
 
     const response = await fetch(polarApiUrl, {
       method: "POST",
@@ -71,13 +190,7 @@ export async function POST(request: NextRequest) {
         "Authorization": `Bearer ${polarToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        product_id: productId,
-        success_url: `${appUrl}/settings/billing?success=true`,
-        customer_metadata: {
-          clerk_id: userId,
-        },
-      }),
+      body: JSON.stringify(checkoutBody),
     })
 
     if (!response.ok) {
@@ -86,94 +199,56 @@ export async function POST(request: NextRequest) {
 
       // Try to parse the error for more details
       let errorMessage = "Failed to create checkout session"
-      let hasActiveSubscription = false
       try {
         const errorJson = JSON.parse(errorText)
         errorMessage = errorJson.detail || errorJson.message || errorMessage
-        // Check if user already has an active subscription
+
+        // If Polar still says "already subscribed" even though we checked,
+        // it might be a different product - redirect to portal
         if (errorMessage.toLowerCase().includes("active subscription") ||
             errorMessage.toLowerCase().includes("already") ||
             errorJson.type === "AlreadySubscribed") {
-          hasActiveSubscription = true
+
+          if (existingCustomerId) {
+            const portalApiUrl = isSandbox
+              ? "https://sandbox-api.polar.sh/v1/customer-portal/sessions"
+              : "https://api.polar.sh/v1/customer-portal/sessions"
+
+            const portalResponse = await fetch(portalApiUrl, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${polarToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                customer_id: existingCustomerId,
+              }),
+            })
+
+            if (portalResponse.ok) {
+              const portalSession = await portalResponse.json()
+              return NextResponse.json({
+                success: true,
+                checkoutUrl: portalSession.customer_portal_url,
+                message: "You already have a subscription. Redirecting to manage it...",
+              })
+            }
+          }
+
+          // Fallback
+          const polarOrgSlug = "PT-yerdna"
+          const polarPortalUrl = isSandbox
+            ? `https://sandbox.polar.sh/${polarOrgSlug}/portal`
+            : `https://polar.sh/${polarOrgSlug}/portal`
+
+          return NextResponse.json({
+            success: true,
+            checkoutUrl: polarPortalUrl,
+            message: "You already have a subscription. Manage it in the Polar portal.",
+          })
         }
       } catch {
         // Use default message
-      }
-
-      // If user already has a subscription, try to find their Polar customer and create portal session
-      if (hasActiveSubscription) {
-        const polarOrgId = process.env.NEXT_PUBLIC_POLAR_ORG_ID
-
-        // First, try to find the customer by metadata (clerk_id)
-        const customersApiUrl = isSandbox
-          ? `https://sandbox-api.polar.sh/v1/customers?organization_id=${polarOrgId}&metadata[clerk_id]=${userId}`
-          : `https://api.polar.sh/v1/customers?organization_id=${polarOrgId}&metadata[clerk_id]=${userId}`
-
-        try {
-          // Look up customer by clerk_id in metadata
-          const customersResponse = await fetch(customersApiUrl, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${polarToken}`,
-              "Content-Type": "application/json",
-            },
-          })
-
-          if (customersResponse.ok) {
-            const customersData = await customersResponse.json()
-            console.log("Polar customers lookup:", customersData)
-
-            if (customersData.items && customersData.items.length > 0) {
-              const customerId = customersData.items[0].id
-
-              // Create customer portal session with the customer ID
-              const portalApiUrl = isSandbox
-                ? "https://sandbox-api.polar.sh/v1/customer-portal/sessions"
-                : "https://api.polar.sh/v1/customer-portal/sessions"
-
-              const portalResponse = await fetch(portalApiUrl, {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${polarToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  customer_id: customerId,
-                }),
-              })
-
-              if (portalResponse.ok) {
-                const portalSession = await portalResponse.json()
-                console.log("Polar customer portal session created:", portalSession)
-                return NextResponse.json({
-                  success: true,
-                  checkoutUrl: portalSession.customer_portal_url,
-                  message: "Redirecting to manage your subscription...",
-                })
-              } else {
-                const portalError = await portalResponse.text()
-                console.error("Polar portal error:", portalError)
-              }
-            }
-          } else {
-            const customersError = await customersResponse.text()
-            console.error("Polar customers lookup error:", customersError)
-          }
-        } catch (portalErr) {
-          console.error("Portal session error:", portalErr)
-        }
-
-        // Fallback: direct to Polar's customer portal URL with org slug
-        const polarOrgSlug = "PT-yerdna" // Your organization slug
-        const polarPortalUrl = isSandbox
-          ? `https://sandbox.polar.sh/${polarOrgSlug}/portal`
-          : `https://polar.sh/${polarOrgSlug}/portal`
-
-        return NextResponse.json({
-          success: true,
-          checkoutUrl: polarPortalUrl,
-          message: "You already have an active subscription. Manage it in the Polar portal.",
-        })
       }
 
       return NextResponse.json(
