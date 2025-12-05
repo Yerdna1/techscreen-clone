@@ -86,11 +86,66 @@ export async function POST(request: NextRequest) {
 
       // Try to parse the error for more details
       let errorMessage = "Failed to create checkout session"
+      let hasActiveSubscription = false
       try {
         const errorJson = JSON.parse(errorText)
         errorMessage = errorJson.detail || errorJson.message || errorMessage
+        // Check if user already has an active subscription
+        if (errorMessage.toLowerCase().includes("active subscription") ||
+            errorMessage.toLowerCase().includes("already") ||
+            errorJson.type === "AlreadySubscribed") {
+          hasActiveSubscription = true
+        }
       } catch {
         // Use default message
+      }
+
+      // If user already has a subscription, create a customer portal session for upgrades
+      if (hasActiveSubscription) {
+        const portalApiUrl = isSandbox
+          ? "https://sandbox-api.polar.sh/v1/customer-portal/sessions"
+          : "https://api.polar.sh/v1/customer-portal/sessions"
+
+        try {
+          const portalResponse = await fetch(portalApiUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${polarToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              customer_metadata: {
+                clerk_id: userId,
+              },
+            }),
+          })
+
+          if (portalResponse.ok) {
+            const portalSession = await portalResponse.json()
+            console.log("Polar customer portal session created:", portalSession)
+            return NextResponse.json({
+              success: true,
+              checkoutUrl: portalSession.url,
+              message: "Redirecting to manage your subscription...",
+            })
+          } else {
+            const portalError = await portalResponse.text()
+            console.error("Polar portal error:", portalError)
+          }
+        } catch (portalErr) {
+          console.error("Portal session error:", portalErr)
+        }
+
+        // Fallback: return helpful message with Polar dashboard link
+        const polarDashboard = isSandbox
+          ? "https://sandbox.polar.sh/purchases/subscriptions"
+          : "https://polar.sh/purchases/subscriptions"
+
+        return NextResponse.json({
+          success: true,
+          checkoutUrl: polarDashboard,
+          message: "You already have an active subscription. Manage it in the Polar dashboard.",
+        })
       }
 
       return NextResponse.json(
