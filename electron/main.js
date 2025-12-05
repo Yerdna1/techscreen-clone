@@ -169,19 +169,8 @@ function createWindow() {
     }
   })
 
-  // Open DevTools for debugging
-  mainWindow.webContents.openDevTools({ mode: 'detach' })
-
-  // Debug: Log all navigation events
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    console.log('[DEBUG] will-navigate:', url)
-  })
-  mainWindow.webContents.on('did-navigate', (event, url) => {
-    console.log('[DEBUG] did-navigate:', url)
-  })
-  mainWindow.webContents.on('did-navigate-in-page', (event, url) => {
-    console.log('[DEBUG] did-navigate-in-page:', url)
-  })
+  // DevTools disabled for production
+  // mainWindow.webContents.openDevTools({ mode: 'detach' })
 }
 
 function createTray() {
