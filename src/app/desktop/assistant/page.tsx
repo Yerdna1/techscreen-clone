@@ -397,7 +397,8 @@ export default function DesktopAssistantPage() {
   // Keyboard shortcuts for web testing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "Space") {
+      // CTRL+Enter to submit
+      if ((e.metaKey || e.ctrlKey) && e.code === "Enter") {
         e.preventDefault()
         handleSubmit()
       }
@@ -678,7 +679,7 @@ export default function DesktopAssistantPage() {
             {isLoading ? "Processing..." : "Submit"}
           </span>
           <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
-            CTRL+SHIFT+SPACE
+            CTRL+ENTER
           </kbd>
         </button>
       </div>
@@ -720,7 +721,7 @@ export default function DesktopAssistantPage() {
             )}
 
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>CTRL+SHIFT+SPACE submit | CTRL+2=mic | CTRL+3=PC | CTRL+4=screenshot</span>
+              <span>CTRL+ENTER submit | CTRL+2=mic | CTRL+3=PC | CTRL+4=screenshot</span>
               <button
                 onClick={handleSubmit}
                 disabled={isLoading || (!question.trim() && !screenshot)}

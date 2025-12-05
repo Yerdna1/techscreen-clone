@@ -260,8 +260,8 @@ function registerGlobalShortcuts() {
     mainWindow?.webContents.send('shortcut', 'clear')
   })
 
-  // Submit: CMD/CTRL + Shift + Space
-  globalShortcut.register('CommandOrControl+Shift+Space', () => {
+  // Submit: CMD/CTRL + Enter
+  globalShortcut.register('CommandOrControl+Return', () => {
     mainWindow?.webContents.send('shortcut', 'submit')
   })
 }
