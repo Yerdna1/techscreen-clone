@@ -24,12 +24,12 @@ export default function DownloadPage() {
     {
       platform: "macOS (Intel)",
       icon: Apple,
-      fileName: `TechScreen-AI-${VERSION}-x64-mac.zip`,
-      downloadUrl: null,
+      fileName: `TechScreen.AI-${VERSION}-mac.zip`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI-${VERSION}-mac.zip`,
       description: "For Intel-based Macs",
-      badge: "Coming Soon",
-      available: false,
-      size: null,
+      badge: "Available",
+      available: true,
+      size: "92 MB",
     },
     {
       platform: "Windows",
