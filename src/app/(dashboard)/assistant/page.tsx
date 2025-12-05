@@ -1,15 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AssistantPanel } from "@/components/assistant/AssistantPanel"
 import { TokenBadge } from "@/components/dashboard/TokenBadge"
 import { KEYBOARD_SHORTCUTS } from "@/config/pricing"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Keyboard } from "lucide-react"
+import { Keyboard, Loader2 } from "lucide-react"
 
 export default function AssistantPage() {
-  // TODO: Fetch from database
-  const [tokens, setTokens] = useState(3)
+  const [tokens, setTokens] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch real token balance from API
+  useEffect(() => {
+    async function fetchTokens() {
+      try {
+        const response = await fetch("/api/billing")
+        if (response.ok) {
+          const data = await response.json()
+          setTokens(data.tokens ?? 0)
+        }
+      } catch (error) {
+        console.error("Failed to fetch tokens:", error)
+        setTokens(0)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchTokens()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -21,13 +40,20 @@ export default function AssistantPage() {
             Get real-time help with coding questions
           </p>
         </div>
-        <TokenBadge tokens={tokens} />
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading...</span>
+          </div>
+        ) : (
+          <TokenBadge tokens={tokens ?? 0} />
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Assistant Panel */}
         <div className="lg:col-span-2">
-          <AssistantPanel tokens={tokens} onTokenUpdate={setTokens} />
+          <AssistantPanel tokens={tokens ?? 0} onTokenUpdate={setTokens} />
         </div>
 
         {/* Sidebar */}
