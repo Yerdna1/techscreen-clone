@@ -221,8 +221,9 @@ export async function POST() {
     })
   } catch (error) {
     console.error("Sync error:", error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { error: "Failed to sync subscription" },
+      { error: "Failed to sync subscription", details: errorMessage },
       { status: 500 }
     )
   }

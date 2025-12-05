@@ -85,7 +85,8 @@ export default function BillingPage() {
         // Refresh billing data
         await fetchBillingData()
       } else {
-        setSyncMessage(`Error: ${data.error || "Failed to sync"}`)
+        const errorDetail = data.details ? ` (${data.details})` : ""
+        setSyncMessage(`Error: ${data.error || "Failed to sync"}${errorDetail}`)
       }
     } catch (err) {
       setSyncMessage("Failed to sync subscription")
