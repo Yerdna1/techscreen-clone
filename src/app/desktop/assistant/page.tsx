@@ -537,7 +537,7 @@ export default function DesktopAssistantPage() {
               },
             }}
             routing="hash"
-            afterSignInUrl="/desktop/assistant"
+            forceRedirectUrl="/desktop/assistant"
             signUpUrl="/sign-up"
           />
         </div>
