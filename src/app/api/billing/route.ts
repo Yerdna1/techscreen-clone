@@ -14,6 +14,8 @@ export async function GET() {
       )
     }
 
+    console.log("Billing API - Looking up user with clerkId:", clerkId)
+
     // Get user data
     const [user] = await db
       .select()
@@ -22,11 +24,14 @@ export async function GET() {
       .limit(1)
 
     if (!user) {
+      console.log("Billing API - User not found for clerkId:", clerkId)
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
       )
     }
+
+    console.log("Billing API - Found user:", { id: user.id, email: user.email, subscriptionTier: user.subscriptionTier, tokens: user.tokens })
 
     // Get active subscription
     const [subscription] = await db
@@ -36,6 +41,8 @@ export async function GET() {
       .orderBy(desc(subscriptions.createdAt))
       .limit(1)
 
+    console.log("Billing API - Subscription:", subscription || "none")
+
     // Get recent token transactions (billing history)
     const transactions = await db
       .select()
@@ -43,6 +50,8 @@ export async function GET() {
       .where(eq(tokenTransactions.userId, user.id))
       .orderBy(desc(tokenTransactions.createdAt))
       .limit(10)
+
+    console.log("Billing API - Transactions count:", transactions.length)
 
     return NextResponse.json({
       user: {
