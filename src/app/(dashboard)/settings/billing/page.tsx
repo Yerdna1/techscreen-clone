@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { CreditCard, Coins, TrendingUp, Receipt, ArrowRight, Loader2 } from "lucide-react"
+import { CreditCard, Coins, TrendingUp, Receipt, ArrowRight, Loader2, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,24 +55,46 @@ const plans = [
 export default function BillingPage() {
   const [billingData, setBillingData] = useState<BillingData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+
+  const fetchBillingData = async () => {
+    try {
+      const response = await fetch("/api/billing")
+      if (!response.ok) {
+        throw new Error("Failed to fetch billing data")
+      }
+      const data = await response.json()
+      setBillingData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const syncSubscription = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const response = await fetch("/api/billing/sync", { method: "POST" })
+      const data = await response.json()
+      if (response.ok) {
+        setSyncMessage(data.message || "Subscription synced successfully!")
+        // Refresh billing data
+        await fetchBillingData()
+      } else {
+        setSyncMessage(`Error: ${data.error || "Failed to sync"}`)
+      }
+    } catch (err) {
+      setSyncMessage("Failed to sync subscription")
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchBillingData() {
-      try {
-        const response = await fetch("/api/billing")
-        if (!response.ok) {
-          throw new Error("Failed to fetch billing data")
-        }
-        const data = await response.json()
-        setBillingData(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchBillingData()
   }, [])
 
@@ -132,10 +154,36 @@ export default function BillingPage() {
       {/* Current Plan */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Plan</CardTitle>
-          <CardDescription>Your current subscription details</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Current Plan</CardTitle>
+              <CardDescription>Your current subscription details</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncSubscription}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sync
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {syncMessage && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${
+              syncMessage.startsWith("Error")
+                ? "bg-red-500/10 text-red-500"
+                : "bg-green-500/10 text-green-500"
+            }`}>
+              {syncMessage}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-lg bg-violet-500/10 flex items-center justify-center">
