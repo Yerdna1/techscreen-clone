@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
@@ -14,6 +15,7 @@ interface StatusIndicator {
 }
 
 export default function DesktopAssistantPage() {
+  const { isSignedIn, isLoaded, user } = useUser()
   const [status, setStatus] = useState<StatusIndicator>({
     mic: "waiting",
     pcAudio: "waiting",
@@ -25,6 +27,7 @@ export default function DesktopAssistantPage() {
   const [language, setLanguage] = useState<ProgrammingLanguage>("javascript")
   const [error, setError] = useState<string | null>(null)
   const [screenshot, setScreenshot] = useState<string | null>(null) // Base64 image data
+  const [tokensRemaining, setTokensRemaining] = useState<number | null>(null)
 
   // Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -56,6 +59,9 @@ export default function DesktopAssistantPage() {
 
       if (res.ok && data.success) {
         setResponse(data.response)
+        if (data.tokensRemaining !== undefined) {
+          setTokensRemaining(data.tokensRemaining)
+        }
       } else {
         setError(data.error || "Failed to get response")
       }
@@ -422,17 +428,100 @@ export default function DesktopAssistantPage() {
     }
   }
 
+  // Show loading while Clerk initializes
+  if (!isLoaded) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        <div
+          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2 absolute left-3">
+            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login screen if not authenticated
+  if (!isSignedIn) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        {/* Draggable Title Bar */}
+        <div
+          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2 absolute left-3">
+            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+          </div>
+        </div>
+
+        {/* Login Content */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="text-center space-y-6">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold text-white">LiveHelpEasy</h1>
+            <p className="text-gray-400 text-sm max-w-xs">
+              Sign in to access your invisible interview assistant. Your questions will be saved to your history.
+            </p>
+            <SignInButton mode="modal">
+              <button className="px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium transition-colors">
+                Sign In to Continue
+              </button>
+            </SignInButton>
+            <p className="text-gray-500 text-xs">
+              Don&apos;t have an account?{" "}
+              <a href="/sign-up" className="text-violet-400 hover:text-violet-300">
+                Sign up
+              </a>
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-center">
+          <span>CMD+9 to hide/show</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
       {/* Draggable Title Bar */}
       <div
-        className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
+        className="h-8 flex items-center justify-between bg-[#2a2a2a] border-b border-[#3a3a3a] px-3"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
-        <div className="flex items-center gap-2 absolute left-3">
+        <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
           <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
           <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+        </div>
+        <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          {tokensRemaining !== null && (
+            <span className="text-xs text-gray-400">{tokensRemaining} tokens</span>
+          )}
+          <UserButton afterSignOutUrl="/desktop/assistant" />
         </div>
       </div>
 
@@ -562,7 +651,7 @@ export default function DesktopAssistantPage() {
                     className="text-gray-500 hover:text-red-400 transition-colors"
                     title="Remove screenshot"
                   >
-                    ✕
+                    X
                   </button>
                 </div>
                 <div className="border border-[#3a3a3a] rounded-lg overflow-hidden bg-[#252525]">
@@ -616,7 +705,7 @@ export default function DesktopAssistantPage() {
                 <ul className="space-y-1.5 text-gray-300 text-sm">
                   {response.thoughts.split("\n").filter(Boolean).map((thought, index) => (
                     <li key={index} className="flex items-start gap-2">
-                      <span className="text-gray-500 mt-0.5">•</span>
+                      <span className="text-gray-500 mt-0.5">-</span>
                       <span>{thought.replace(/^[•\-\*]\s*/, "")}</span>
                     </li>
                   ))}
@@ -653,7 +742,7 @@ export default function DesktopAssistantPage() {
                 <ul className="space-y-1.5 text-gray-300 text-sm">
                   {response.keyPoints.map((point, index) => (
                     <li key={index} className="flex items-start gap-2">
-                      <span className="text-violet-500 mt-0.5">•</span>
+                      <span className="text-violet-500 mt-0.5">-</span>
                       <span>{point}</span>
                     </li>
                   ))}
@@ -674,7 +763,7 @@ export default function DesktopAssistantPage() {
 
       {/* Footer Status */}
       <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-between">
-        <span>TechScreen AI</span>
+        <span>LiveHelpEasy - {user?.emailAddresses?.[0]?.emailAddress || "Signed In"}</span>
         <span>CMD+9 to hide/show</span>
       </div>
     </div>
