@@ -21,7 +21,9 @@
       "Bash(dist/LiveHelpEasy-0.2.1-mac.zip )",
       "Bash(vercel:*)",
       "Bash(echo:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(\"/Volumes/DATA/Python/ScreenShare_Test/techscreen-clone/electron/dist/LiveHelpEasy-0.3.1-arm64-mac.zip\" )",
+      "Bash(\"/Volumes/DATA/Python/ScreenShare_Test/techscreen-clone/electron/dist/LiveHelpEasy-0.3.1-mac.zip\" )"
     ],
     "deny": [],
     "ask": []

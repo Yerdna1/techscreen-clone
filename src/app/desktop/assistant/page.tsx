@@ -663,8 +663,18 @@ export default function DesktopAssistantPage() {
         </div>
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           {tokensRemaining !== null && (
-            <span className="text-xs text-gray-400">{tokensRemaining} tokens</span>
+            <span className={`text-xs ${tokensRemaining <= 0 ? 'text-red-400' : 'text-gray-400'}`}>
+              {tokensRemaining} tokens
+            </span>
           )}
+          <a
+            href="https://techscreen-clone.vercel.app/pricing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2 py-0.5 text-xs bg-violet-600 hover:bg-violet-700 rounded text-white transition-colors"
+          >
+            Buy Credits
+          </a>
           {isSignedIn && <UserButton afterSignOutUrl="/desktop/assistant" />}
           {apiKey && !isSignedIn && (
             <button
@@ -840,6 +850,21 @@ export default function DesktopAssistantPage() {
                 {isLoading ? "Processing..." : screenshot ? "Analyze Screenshot" : "Submit"}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* No Credits Warning */}
+        {tokensRemaining !== null && tokensRemaining <= 0 && (
+          <div className="p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg text-center">
+            <p className="text-yellow-400 text-sm font-medium mb-2">You have no credits remaining</p>
+            <a
+              href="https://techscreen-clone.vercel.app/pricing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded text-white text-sm transition-colors"
+            >
+              Buy More Credits
+            </a>
           </div>
         )}
 
