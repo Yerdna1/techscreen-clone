@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
+import { useUser, UserButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Sparkles, Menu, X } from "lucide-react"
 import { useState } from "react"
@@ -46,7 +46,7 @@ export function Navbar() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex md:items-center md:gap-4">
-            {isSignedIn ? (
+            {isLoaded && isSignedIn ? (
               <div className="flex items-center gap-4">
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">
@@ -57,11 +57,11 @@ export function Navbar() {
               </div>
             ) : (
               <>
-                <SignInButton mode="modal">
+                <Link href="/sign-in">
                   <Button variant="ghost" size="sm">
                     Sign In
                   </Button>
-                </SignInButton>
+                </Link>
                 <Link href="/sign-up">
                   <Button variant="gradient" size="sm">
                     Get Started
@@ -70,11 +70,6 @@ export function Navbar() {
               </>
             )}
           </div>
-
-          {/* Loading indicator for debugging */}
-          {!isLoaded && (
-            <span className="text-xs text-muted-foreground hidden md:block">Loading...</span>
-          )}
 
           {/* Mobile Menu Button */}
           <button
@@ -116,7 +111,7 @@ export function Navbar() {
               FAQ
             </Link>
             <div className="pt-4 border-t border-border/40">
-              {isSignedIn ? (
+              {isLoaded && isSignedIn ? (
                 <div className="flex items-center gap-4">
                   <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" size="sm" className="w-full">
@@ -127,11 +122,11 @@ export function Navbar() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <SignInButton mode="modal">
+                  <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" size="sm" className="w-full">
                       Sign In
                     </Button>
-                  </SignInButton>
+                  </Link>
                   <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="gradient" size="sm" className="w-full">
                       Get Started
