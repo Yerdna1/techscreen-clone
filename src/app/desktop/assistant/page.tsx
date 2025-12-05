@@ -428,6 +428,25 @@ export default function DesktopAssistantPage() {
     }
   }
 
+  // Window control handlers
+  const handleClose = () => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.closeWindow) {
+      (window as any).electronAPI.closeWindow()
+    }
+  }
+
+  const handleMinimize = () => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.minimizeWindow) {
+      (window as any).electronAPI.minimizeWindow()
+    }
+  }
+
+  const handleMaximize = () => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.maximizeWindow) {
+      (window as any).electronAPI.maximizeWindow()
+    }
+  }
+
   // Show loading while Clerk initializes
   if (!isLoaded) {
     return (
@@ -436,10 +455,10 @@ export default function DesktopAssistantPage() {
           className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
           style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
         >
-          <div className="flex items-center gap-2 absolute left-3">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
@@ -462,10 +481,10 @@ export default function DesktopAssistantPage() {
           className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
           style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
         >
-          <div className="flex items-center gap-2 absolute left-3">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
           </div>
         </div>
 
@@ -512,10 +531,10 @@ export default function DesktopAssistantPage() {
         className="h-8 flex items-center justify-between bg-[#2a2a2a] border-b border-[#3a3a3a] px-3"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-          <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-          <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+        <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+          <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+          <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
         </div>
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           {tokensRemaining !== null && (

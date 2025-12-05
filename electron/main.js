@@ -267,6 +267,24 @@ ipcMain.on('set-opacity', (event, value) => {
   mainWindow?.setOpacity(value)
 })
 
+// Window control handlers
+ipcMain.on('window-close', () => {
+  mainWindow?.hide()
+  isVisible = false
+})
+
+ipcMain.on('window-minimize', () => {
+  mainWindow?.minimize()
+})
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow?.maximize()
+  }
+})
+
 // Get desktop sources for screen/window capture with audio
 ipcMain.handle('get-desktop-sources', async () => {
   const sources = await desktopCapturer.getSources({

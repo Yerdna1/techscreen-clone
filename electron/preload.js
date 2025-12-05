@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAlwaysOnTop: (value) => ipcRenderer.send('set-always-on-top', value),
   setOpacity: (value) => ipcRenderer.send('set-opacity', value),
 
+  // Window actions (close, minimize, maximize)
+  closeWindow: () => ipcRenderer.send('window-close'),
+  minimizeWindow: () => ipcRenderer.send('window-minimize'),
+  maximizeWindow: () => ipcRenderer.send('window-maximize'),
+
   // Platform info
   platform: process.platform,
 })
