@@ -1,0 +1,10 @@
+# Ignore Electron build artifacts
+electron/dist/
+electron/node_modules/
+
+# Other large files
+*.exe
+*.zip
+*.dmg
+*.AppImage
+*.deb
