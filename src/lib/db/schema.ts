@@ -3,9 +3,8 @@ import { pgTable, uuid, text, integer, timestamp, pgEnum } from "drizzle-orm/pg-
 // Enums
 export const subscriptionTierEnum = pgEnum("subscription_tier", [
   "free",
-  "essential",
   "professional",
-  "expert",
+  "enterprise",
 ])
 
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
