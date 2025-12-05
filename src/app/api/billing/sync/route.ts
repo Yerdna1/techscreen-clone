@@ -148,10 +148,11 @@ export async function POST() {
     })
 
     // Update or create subscription record
-    const existingSubscription = await db
+    // First check if user has ANY subscription record (by user ID, not polar ID)
+    const existingUserSubscription = await db
       .select()
       .from(subscriptions)
-      .where(eq(subscriptions.polarSubscriptionId, activeSubscription.id))
+      .where(eq(subscriptions.userId, user.id))
       .limit(1)
 
     const startDate = activeSubscription.current_period_start
@@ -161,18 +162,21 @@ export async function POST() {
       ? new Date(activeSubscription.current_period_end)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
-    if (existingSubscription.length > 0) {
+    if (existingUserSubscription.length > 0) {
+      // Update existing subscription record (by user ID, update the polar ID too in case it changed)
       await db
         .update(subscriptions)
         .set({
+          polarSubscriptionId: activeSubscription.id,
           status: activeSubscription.status as "active" | "cancelled" | "past_due",
           plan,
           currentPeriodStart: startDate,
           currentPeriodEnd: endDate,
           updatedAt: new Date(),
         })
-        .where(eq(subscriptions.polarSubscriptionId, activeSubscription.id))
+        .where(eq(subscriptions.userId, user.id))
     } else {
+      // Create new subscription record
       await db.insert(subscriptions).values({
         userId: user.id,
         polarSubscriptionId: activeSubscription.id,
