@@ -46,9 +46,7 @@ export function Navbar() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex md:items-center md:gap-4">
-            {!isLoaded ? (
-              <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
-            ) : isSignedIn ? (
+            {isSignedIn ? (
               <div className="flex items-center gap-4">
                 <Link href="/dashboard">
                   <Button variant="ghost" size="sm">
@@ -72,6 +70,11 @@ export function Navbar() {
               </>
             )}
           </div>
+
+          {/* Loading indicator for debugging */}
+          {!isLoaded && (
+            <span className="text-xs text-muted-foreground hidden md:block">Loading...</span>
+          )}
 
           {/* Mobile Menu Button */}
           <button
