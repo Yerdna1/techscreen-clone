@@ -13,6 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TokenBadge } from "@/components/dashboard/TokenBadge"
+import { db, users, questions } from "@/lib/db"
+import { eq, count } from "drizzle-orm"
+import type { SubscriptionTier } from "@/types"
 
 export default async function DashboardPage() {
   const user = await currentUser()
@@ -21,11 +24,27 @@ export default async function DashboardPage() {
     redirect("/sign-in")
   }
 
-  // TODO: Fetch actual data from database
+  // Fetch real data from database
+  const [dbUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.clerkId, user.id))
+    .limit(1)
+
+  // Get question count
+  let questionsAsked = 0
+  if (dbUser) {
+    const [questionCount] = await db
+      .select({ count: count() })
+      .from(questions)
+      .where(eq(questions.userId, dbUser.id))
+    questionsAsked = questionCount?.count || 0
+  }
+
   const stats = {
-    tokens: 3,
-    questionsAsked: 0,
-    subscriptionTier: "free" as const,
+    tokens: dbUser?.tokens ?? 3,
+    questionsAsked,
+    subscriptionTier: (dbUser?.subscriptionTier ?? "free") as SubscriptionTier,
   }
 
   return (

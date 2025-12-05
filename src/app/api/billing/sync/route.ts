@@ -189,20 +189,25 @@ export async function POST() {
 
     // Update user
     const previousTier = user.subscriptionTier
-    const tokensToAdd = planConfig ? planConfig.tokens : 0
+    const planTokens = planConfig ? planConfig.tokens : 0
+
+    // Only reset tokens if tier has changed (upgrade/downgrade)
+    // Otherwise, keep the user's current token balance
+    const shouldResetTokens = previousTier !== plan
+    const newTokens = shouldResetTokens ? planTokens : user.tokens
 
     await db
       .update(users)
       .set({
         subscriptionTier: plan,
         subscriptionId: activeSubscription.id,
-        tokens: tokensToAdd,
+        tokens: newTokens,
         updatedAt: new Date(),
       })
       .where(eq(users.id, user.id))
 
     // Record transaction if tier changed
-    if (previousTier !== plan && planConfig) {
+    if (shouldResetTokens && planConfig) {
       await db.insert(tokenTransactions).values({
         userId: user.id,
         amount: planConfig.tokens,
@@ -216,11 +221,12 @@ export async function POST() {
       message: "Subscription synced successfully",
       previousTier,
       newTier: plan,
+      tokensReset: shouldResetTokens,
       subscription: {
         id: activeSubscription.id,
         status: activeSubscription.status,
         plan,
-        tokens: tokensToAdd
+        tokens: newTokens
       }
     })
   } catch (error) {
