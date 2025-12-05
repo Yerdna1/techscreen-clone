@@ -14,18 +14,18 @@ export default function DownloadPage() {
     {
       platform: "macOS (Apple Silicon)",
       icon: Apple,
-      fileName: `TechScreen.AI-${VERSION}-arm64-mac.zip`,
-      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI-${VERSION}-arm64-mac.zip`,
+      fileName: `LiveHelpEasy-${VERSION}-arm64-mac.zip`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/LiveHelpEasy-${VERSION}-arm64-mac.zip`,
       description: "For M1, M2, M3 Macs",
       badge: "Available",
       available: true,
-      size: "91 MB",
+      size: "87 MB",
     },
     {
       platform: "macOS (Intel)",
       icon: Apple,
-      fileName: `TechScreen.AI-${VERSION}-mac.zip`,
-      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI-${VERSION}-mac.zip`,
+      fileName: `LiveHelpEasy-${VERSION}-mac.zip`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/LiveHelpEasy-${VERSION}-mac.zip`,
       description: "For Intel-based Macs",
       badge: "Available",
       available: true,
@@ -34,8 +34,8 @@ export default function DownloadPage() {
     {
       platform: "Windows",
       icon: Monitor,
-      fileName: `TechScreen.AI.${VERSION}.exe`,
-      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/TechScreen.AI.${VERSION}.exe`,
+      fileName: `LiveHelpEasy-${VERSION}.exe`,
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/LiveHelpEasy-${VERSION}.exe`,
       description: "Windows 10/11 64-bit (Portable)",
       badge: "Available",
       available: true,
@@ -120,7 +120,7 @@ export default function DownloadPage() {
           <CardContent className="space-y-3">
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>Download the ZIP file above</li>
-              <li>Extract the ZIP to get <code className="bg-muted px-1 rounded">TechScreen AI.app</code></li>
+              <li>Extract the ZIP to get <code className="bg-muted px-1 rounded">LiveHelpEasy.app</code></li>
               <li>Move the app to your <code className="bg-muted px-1 rounded">Applications</code> folder</li>
               <li>Right-click the app and select <strong>Open</strong> (required first time to bypass Gatekeeper)</li>
               <li>Click <strong>Open</strong> in the security dialog</li>
