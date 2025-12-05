@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useUser, UserButton } from "@clerk/nextjs"
+import { useUser, SignIn, UserButton } from "@clerk/nextjs"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
@@ -474,8 +474,81 @@ export default function DesktopAssistantPage() {
     }
   }
 
-  // Skip login check for now - allow anonymous access
-  // TODO: Re-enable login when Clerk auth is fixed for Electron
+  // Show loading state while Clerk initializes
+  if (!isLoaded) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        <div
+          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login screen if not authenticated
+  if (!isSignedIn) {
+    return (
+      <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">
+        {/* Draggable Title Bar */}
+        <div
+          className="h-8 flex items-center justify-center bg-[#2a2a2a] border-b border-[#3a3a3a]"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
+          <div className="flex items-center gap-2 absolute left-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-[#ff5f57] hover:brightness-90 transition-all" title="Close" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-[#febc2e] hover:brightness-90 transition-all" title="Minimize" />
+            <button onClick={handleMaximize} className="w-3 h-3 rounded-full bg-[#28c840] hover:brightness-90 transition-all" title="Maximize" />
+          </div>
+        </div>
+
+        {/* Login Content - Embedded SignIn Component with hash routing */}
+        <div
+          className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <SignIn
+            appearance={{
+              elements: {
+                rootBox: "w-full max-w-md",
+                card: "bg-[#252525] border border-[#3a3a3a] shadow-xl",
+                headerTitle: "text-white",
+                headerSubtitle: "text-gray-400",
+                socialButtonsBlockButton: "bg-[#3a3a3a] border-[#4a4a4a] text-white hover:bg-[#4a4a4a]",
+                formFieldLabel: "text-gray-300",
+                formFieldInput: "bg-[#1a1a1a] border-[#3a3a3a] text-white",
+                formButtonPrimary: "bg-violet-600 hover:bg-violet-700",
+                footerActionLink: "text-violet-400 hover:text-violet-300",
+                identityPreviewEditButton: "text-violet-400",
+                formFieldInputShowPasswordButton: "text-gray-400",
+              },
+            }}
+            routing="hash"
+            afterSignInUrl="/desktop/assistant"
+            signUpUrl="/sign-up"
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-4 py-2 bg-[#252525] border-t border-[#3a3a3a] text-xs text-gray-500 flex items-center justify-center">
+          <span>CMD+9 to hide/show</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] select-none">

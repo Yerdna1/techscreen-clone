@@ -1,8 +1,19 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, desktopCapturer, screen, Tray, Menu, nativeImage } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, desktopCapturer, screen, Tray, Menu, nativeImage, session } = require('electron')
 const path = require('path')
 const Store = require('electron-store')
 
 const store = new Store()
+
+// Configure session for persistent cookies (required for Clerk auth)
+app.whenReady().then(() => {
+  // Enable persistent storage for authentication cookies
+  const ses = session.defaultSession
+
+  // Allow third-party cookies for Clerk authentication
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({ requestHeaders: details.requestHeaders })
+  })
+})
 
 let mainWindow = null
 let tray = null
@@ -74,6 +85,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      // Enable persistent storage for Clerk auth cookies
+      partition: 'persist:main',
     },
   })
 
