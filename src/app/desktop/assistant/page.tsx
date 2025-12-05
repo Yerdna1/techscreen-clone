@@ -324,6 +324,21 @@ export default function DesktopAssistantPage() {
     // Don't do anything if processing
   }, [status.pcAudio, startPcAudioRecording, stopPcAudioRecording])
 
+  // Capture screenshot via Electron
+  const captureScreenshot = useCallback(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.captureScreen) {
+      setStatus((s) => ({ ...s, screenshot: "processing" }))
+      ;(window as any).electronAPI.captureScreen()
+    }
+  }, [])
+
+  // Toggle app visibility via Electron
+  const toggleVisibility = useCallback(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.closeWindow) {
+      (window as any).electronAPI.closeWindow()
+    }
+  }, [])
+
   // Listen for Electron IPC events
   useEffect(() => {
     const handleShortcut = (event: CustomEvent<string>) => {
@@ -400,11 +415,21 @@ export default function DesktopAssistantPage() {
         e.preventDefault()
         togglePcAudio()
       }
+      // CMD+4 for screenshot
+      if ((e.metaKey || e.ctrlKey) && e.code === "Digit4") {
+        e.preventDefault()
+        captureScreenshot()
+      }
+      // CMD+9 for toggle visibility
+      if ((e.metaKey || e.ctrlKey) && e.code === "Digit9") {
+        e.preventDefault()
+        toggleVisibility()
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleSubmit, handleClear, toggleMicrophone, togglePcAudio])
+  }, [handleSubmit, handleClear, toggleMicrophone, togglePcAudio, captureScreenshot, toggleVisibility])
 
   const getStatusText = (s: InputStatus) => {
     switch (s) {
@@ -577,8 +602,12 @@ export default function DesktopAssistantPage() {
             </kbd>
           </button>
 
-          {/* Screenshot Status */}
-          <div className="flex items-center gap-2">
+          {/* Screenshot Status - Clickable */}
+          <button
+            onClick={captureScreenshot}
+            disabled={status.screenshot === "processing"}
+            className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors disabled:opacity-50"
+          >
             <span className="text-gray-300 text-xs font-medium">Screenshot:</span>
             <span className={`text-xs ${getStatusColor(status.screenshot)}`}>
               {getStatusText(status.screenshot)}
@@ -586,7 +615,7 @@ export default function DesktopAssistantPage() {
             <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
               CTRL+4
             </kbd>
-          </div>
+          </button>
         </div>
 
         {/* Language Selector */}
@@ -614,14 +643,17 @@ export default function DesktopAssistantPage() {
       {/* Second Status Bar - App Controls & AI Status */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#1f1f1f] border-b border-[#3a3a3a]">
         <div className="flex items-center gap-4">
-          {/* App Interact */}
-          <div className="flex items-center gap-2">
+          {/* App Toggle - Clickable */}
+          <button
+            onClick={toggleVisibility}
+            className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors"
+          >
             <span className="text-violet-400 text-xs font-medium">App:</span>
-            <span className="text-gray-400 text-xs">Interact</span>
+            <span className="text-gray-400 text-xs">Hide/Show</span>
             <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
               CTRL+9
             </kbd>
-          </div>
+          </button>
 
           {/* Clear */}
           <button
@@ -635,16 +667,20 @@ export default function DesktopAssistantPage() {
           </button>
         </div>
 
-        {/* AI Status */}
-        <div className="flex items-center gap-2">
+        {/* AI Status - Clickable */}
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading || (!question.trim() && !screenshot)}
+          className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors disabled:opacity-50"
+        >
           <span className="text-gray-300 text-xs font-medium">AI:</span>
           <span className={`text-xs ${isLoading ? "text-yellow-500 animate-pulse" : "text-gray-400"}`}>
-            {isLoading ? "Processing request..." : "Waiting for request"}
+            {isLoading ? "Processing..." : "Submit"}
           </span>
           <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
             CTRL+SPACE
           </kbd>
-        </div>
+        </button>
       </div>
 
       {/* Main Content */}
