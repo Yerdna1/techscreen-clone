@@ -515,7 +515,10 @@ export default function DesktopAssistantPage() {
         </div>
 
         {/* Login Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div
+          className="flex-1 flex flex-col items-center justify-center p-8"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
           <div className="text-center space-y-6">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
@@ -528,8 +531,11 @@ export default function DesktopAssistantPage() {
             <p className="text-gray-400 text-sm max-w-xs">
               Sign in to access your invisible interview assistant. Your questions will be saved to your history.
             </p>
-            <SignInButton mode="modal" forceRedirectUrl="/desktop/assistant">
-              <button className="px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium transition-colors">
+            <SignInButton mode="redirect" forceRedirectUrl="/desktop/assistant">
+              <button
+                className="px-6 py-3 bg-violet-600 hover:bg-violet-700 rounded-lg text-white font-medium transition-colors cursor-pointer"
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
                 Sign In to Continue
               </button>
             </SignInButton>
