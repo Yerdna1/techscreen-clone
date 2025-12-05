@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSources: () => ipcRenderer.invoke('get-sources'),
   captureScreen: () => ipcRenderer.invoke('capture-screen'),
 
+  // Desktop sources for system audio capture
+  getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
+
   // Window controls
   setAlwaysOnTop: (value) => ipcRenderer.send('set-always-on-top', value),
   setOpacity: (value) => ipcRenderer.send('set-opacity', value),

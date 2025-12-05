@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import type { AIResponse, ProgrammingLanguage } from "@/types"
@@ -9,34 +9,46 @@ type InputStatus = "waiting" | "recording" | "processing"
 
 interface StatusIndicator {
   mic: InputStatus
+  pcAudio: InputStatus
   screenshot: InputStatus
 }
 
 export default function DesktopAssistantPage() {
   const [status, setStatus] = useState<StatusIndicator>({
     mic: "waiting",
+    pcAudio: "waiting",
     screenshot: "waiting",
   })
   const [question, setQuestion] = useState("")
   const [response, setResponse] = useState<AIResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [language, setLanguage] = useState<ProgrammingLanguage>("javascript")
-
   const [error, setError] = useState<string | null>(null)
+  const [screenshot, setScreenshot] = useState<string | null>(null) // Base64 image data
+
+  // Audio recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  // PC Audio (system audio) recording refs
+  const pcAudioRecorderRef = useRef<MediaRecorder | null>(null)
+  const pcAudioChunksRef = useRef<Blob[]>([])
+  const pcAudioStreamRef = useRef<MediaStream | null>(null)
 
   const handleSubmit = useCallback(async () => {
-    if (!question.trim()) return
+    // Allow submit if we have a question OR a screenshot
+    if (!question.trim() && !screenshot) return
 
     setIsLoading(true)
     setError(null)
     try {
-      // Use public desktop API endpoint (no auth required)
       const res = await fetch("/api/desktop/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question,
           language,
+          screenshot, // Include screenshot for vision AI
         }),
       })
 
@@ -53,13 +65,258 @@ export default function DesktopAssistantPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [question, language])
+  }, [question, language, screenshot])
 
   const handleClear = useCallback(() => {
     setQuestion("")
     setResponse(null)
     setError(null)
+    setScreenshot(null)
   }, [])
+
+  // Start microphone recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+      })
+
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop())
+
+        // Create audio blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+
+        // Set status to processing
+        setStatus((s) => ({ ...s, mic: "processing" }))
+
+        // Send to transcription API
+        try {
+          const formData = new FormData()
+          formData.append("audio", audioBlob, "recording.webm")
+
+          const res = await fetch("/api/desktop/transcribe", {
+            method: "POST",
+            body: formData,
+          })
+
+          const data = await res.json()
+
+          if (res.ok && data.success) {
+            // Append transcribed text to question
+            setQuestion((prev) => {
+              const newText = data.text.trim()
+              if (prev.trim()) {
+                return prev + "\n" + newText
+              }
+              return newText
+            })
+          } else {
+            setError(data.error || "Transcription failed")
+          }
+        } catch (err) {
+          console.error("Transcription error:", err)
+          setError("Failed to transcribe audio")
+        } finally {
+          setStatus((s) => ({ ...s, mic: "waiting" }))
+        }
+      }
+
+      mediaRecorder.start()
+      mediaRecorderRef.current = mediaRecorder
+      setStatus((s) => ({ ...s, mic: "recording" }))
+    } catch (err) {
+      console.error("Microphone error:", err)
+      setError("Failed to access microphone. Please grant permission.")
+      setStatus((s) => ({ ...s, mic: "waiting" }))
+    }
+  }, [])
+
+  // Stop microphone recording
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop()
+    }
+  }, [])
+
+  // Toggle microphone recording
+  const toggleMicrophone = useCallback(() => {
+    if (status.mic === "waiting") {
+      startRecording()
+    } else if (status.mic === "recording") {
+      stopRecording()
+    }
+    // Don't do anything if processing
+  }, [status.mic, startRecording, stopRecording])
+
+  // Start PC Audio (system audio) recording
+  const startPcAudioRecording = useCallback(async () => {
+    try {
+      // Check if running in Electron
+      const isElectron = typeof window !== "undefined" && (window as any).electronAPI
+
+      let stream: MediaStream
+
+      if (isElectron) {
+        // Use Electron's desktopCapturer API
+        const sources = await (window as any).electronAPI.getDesktopSources()
+
+        // Find the "Entire Screen" or first screen source
+        const screenSource = sources.find((s: any) => s.name.includes("Entire Screen") || s.name.includes("Screen"))
+          || sources[0]
+
+        if (!screenSource) {
+          setError("No screen source available")
+          return
+        }
+
+        // Use getUserMedia with Electron's chromeMediaSourceId
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            // @ts-ignore - Electron-specific constraints
+            mandatory: {
+              chromeMediaSource: "desktop",
+            },
+          },
+          video: {
+            // @ts-ignore - Electron-specific constraints
+            mandatory: {
+              chromeMediaSource: "desktop",
+              chromeMediaSourceId: screenSource.id,
+            },
+          },
+        })
+
+        // Stop video tracks - we only need audio
+        stream.getVideoTracks().forEach((track) => track.stop())
+
+        // Check if we got audio
+        if (stream.getAudioTracks().length === 0) {
+          setError("No system audio captured. On macOS, you may need to install a virtual audio driver like BlackHole.")
+          return
+        }
+      } else {
+        // Fallback for browser: Use getDisplayMedia
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        })
+
+        // Check if we got audio tracks
+        const audioTracks = stream.getAudioTracks()
+        if (audioTracks.length === 0) {
+          stream.getTracks().forEach((track) => track.stop())
+          setError("No audio available. Make sure to check 'Share audio' when selecting the screen.")
+          return
+        }
+
+        // Stop video tracks
+        stream.getVideoTracks().forEach((track) => track.stop())
+      }
+
+      // Create audio-only stream
+      const audioStream = new MediaStream(stream.getAudioTracks())
+      pcAudioStreamRef.current = stream
+
+      const mediaRecorder = new MediaRecorder(audioStream, {
+        mimeType: "audio/webm",
+      })
+
+      pcAudioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          pcAudioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        pcAudioStreamRef.current?.getTracks().forEach((track) => track.stop())
+
+        // Create audio blob
+        const audioBlob = new Blob(pcAudioChunksRef.current, { type: "audio/webm" })
+
+        // Set status to processing
+        setStatus((s) => ({ ...s, pcAudio: "processing" }))
+
+        // Send to transcription API
+        try {
+          const formData = new FormData()
+          formData.append("audio", audioBlob, "pc-audio.webm")
+
+          const res = await fetch("/api/desktop/transcribe", {
+            method: "POST",
+            body: formData,
+          })
+
+          const data = await res.json()
+
+          if (res.ok && data.success) {
+            // Append transcribed text to question with label
+            setQuestion((prev) => {
+              const newText = `[PC Audio] ${data.text.trim()}`
+              if (prev.trim()) {
+                return prev + "\n" + newText
+              }
+              return newText
+            })
+          } else {
+            setError(data.error || "Transcription failed")
+          }
+        } catch (err) {
+          console.error("Transcription error:", err)
+          setError("Failed to transcribe PC audio")
+        } finally {
+          setStatus((s) => ({ ...s, pcAudio: "waiting" }))
+        }
+      }
+
+      mediaRecorder.start()
+      pcAudioRecorderRef.current = mediaRecorder
+      setStatus((s) => ({ ...s, pcAudio: "recording" }))
+    } catch (err) {
+      console.error("PC Audio error:", err)
+      const errMsg = err instanceof Error ? err.message : "Unknown error"
+      if (errMsg.includes("audio")) {
+        setError("System audio capture failed. On macOS, you need a virtual audio driver like BlackHole to capture system audio.")
+      } else {
+        setError(`Failed to capture system audio: ${errMsg}`)
+      }
+      setStatus((s) => ({ ...s, pcAudio: "waiting" }))
+    }
+  }, [])
+
+  // Stop PC Audio recording
+  const stopPcAudioRecording = useCallback(() => {
+    if (pcAudioRecorderRef.current && pcAudioRecorderRef.current.state === "recording") {
+      pcAudioRecorderRef.current.stop()
+    }
+  }, [])
+
+  // Toggle PC Audio recording
+  const togglePcAudio = useCallback(() => {
+    if (status.pcAudio === "waiting") {
+      startPcAudioRecording()
+    } else if (status.pcAudio === "recording") {
+      stopPcAudioRecording()
+    }
+    // Don't do anything if processing
+  }, [status.pcAudio, startPcAudioRecording, stopPcAudioRecording])
 
   // Listen for Electron IPC events
   useEffect(() => {
@@ -67,10 +324,10 @@ export default function DesktopAssistantPage() {
       const action = event.detail
       switch (action) {
         case "microphone":
-          setStatus((s) => ({
-            ...s,
-            mic: s.mic === "waiting" ? "recording" : "waiting",
-          }))
+          toggleMicrophone()
+          break
+        case "pc-audio":
+          togglePcAudio()
           break
         case "screenshot":
           setStatus((s) => ({ ...s, screenshot: "processing" }))
@@ -86,7 +343,14 @@ export default function DesktopAssistantPage() {
     }
 
     const handleScreenshot = (event: CustomEvent<string>) => {
-      setQuestion(`[Screenshot captured]\n${event.detail}`)
+      // Store the base64 screenshot image data
+      setScreenshot(event.detail)
+      setQuestion((prev) => {
+        if (prev.trim()) {
+          return prev + "\n[Screenshot captured - see preview below]"
+        }
+        return "[Screenshot captured - see preview below]"
+      })
       setStatus((s) => ({ ...s, screenshot: "waiting" }))
     }
 
@@ -107,7 +371,7 @@ export default function DesktopAssistantPage() {
       window.removeEventListener("electron-shortcut", handleShortcut as EventListener)
       window.removeEventListener("electron-screenshot", handleScreenshot as EventListener)
     }
-  }, [handleClear, handleSubmit])
+  }, [handleClear, handleSubmit, toggleMicrophone, togglePcAudio])
 
   // Keyboard shortcuts for web testing
   useEffect(() => {
@@ -120,11 +384,21 @@ export default function DesktopAssistantPage() {
         e.preventDefault()
         handleClear()
       }
+      // CMD+2 for microphone toggle
+      if ((e.metaKey || e.ctrlKey) && e.code === "Digit2") {
+        e.preventDefault()
+        toggleMicrophone()
+      }
+      // CMD+3 for PC audio toggle
+      if ((e.metaKey || e.ctrlKey) && e.code === "Digit3") {
+        e.preventDefault()
+        togglePcAudio()
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleSubmit, handleClear])
+  }, [handleSubmit, handleClear, toggleMicrophone, togglePcAudio])
 
   const getStatusText = (s: InputStatus) => {
     switch (s) {
@@ -142,7 +416,7 @@ export default function DesktopAssistantPage() {
       case "waiting":
         return "text-gray-400"
       case "recording":
-        return "text-red-500"
+        return "text-red-500 animate-pulse"
       case "processing":
         return "text-yellow-500"
     }
@@ -162,28 +436,47 @@ export default function DesktopAssistantPage() {
         </div>
       </div>
 
-      {/* Status Bar */}
+      {/* Status Bar - Input Sources */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#252525] border-b border-[#3a3a3a]">
-        <div className="flex items-center gap-6">
-          {/* Microphone Status */}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-300 text-sm font-medium">Microphone:</span>
-            <span className={`text-sm ${getStatusColor(status.mic)}`}>
+        <div className="flex items-center gap-4">
+          {/* Microphone Status - Clickable */}
+          <button
+            onClick={toggleMicrophone}
+            disabled={status.mic === "processing"}
+            className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors disabled:opacity-50"
+          >
+            <span className="text-gray-300 text-xs font-medium">Microphone:</span>
+            <span className={`text-xs ${getStatusColor(status.mic)}`}>
               {getStatusText(status.mic)}
             </span>
-            <kbd className="px-1.5 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
-              CMD+2
+            <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+              CTRL+2
             </kbd>
-          </div>
+          </button>
+
+          {/* PC Audio Status - Clickable (for system audio like Google Meet) */}
+          <button
+            onClick={togglePcAudio}
+            disabled={status.pcAudio === "processing"}
+            className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors disabled:opacity-50"
+          >
+            <span className="text-gray-300 text-xs font-medium">PC Audio:</span>
+            <span className={`text-xs ${getStatusColor(status.pcAudio)}`}>
+              {getStatusText(status.pcAudio)}
+            </span>
+            <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+              CTRL+3
+            </kbd>
+          </button>
 
           {/* Screenshot Status */}
           <div className="flex items-center gap-2">
-            <span className="text-gray-300 text-sm font-medium">Screenshot:</span>
-            <span className={`text-sm ${getStatusColor(status.screenshot)}`}>
+            <span className="text-gray-300 text-xs font-medium">Screenshot:</span>
+            <span className={`text-xs ${getStatusColor(status.screenshot)}`}>
               {getStatusText(status.screenshot)}
             </span>
-            <kbd className="px-1.5 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
-              CMD+4
+            <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+              CTRL+4
             </kbd>
           </div>
         </div>
@@ -192,7 +485,7 @@ export default function DesktopAssistantPage() {
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as ProgrammingLanguage)}
-          className="px-2 py-1 text-sm bg-[#3a3a3a] border border-[#4a4a4a] rounded text-gray-300 focus:outline-none focus:border-violet-500"
+          className="px-2 py-1 text-xs bg-[#3a3a3a] border border-[#4a4a4a] rounded text-gray-300 focus:outline-none focus:border-violet-500"
         >
           <option value="javascript">JavaScript</option>
           <option value="typescript">TypeScript</option>
@@ -210,6 +503,42 @@ export default function DesktopAssistantPage() {
         </select>
       </div>
 
+      {/* Second Status Bar - App Controls & AI Status */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#1f1f1f] border-b border-[#3a3a3a]">
+        <div className="flex items-center gap-4">
+          {/* App Interact */}
+          <div className="flex items-center gap-2">
+            <span className="text-violet-400 text-xs font-medium">App:</span>
+            <span className="text-gray-400 text-xs">Interact</span>
+            <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+              CTRL+9
+            </kbd>
+          </div>
+
+          {/* Clear */}
+          <button
+            onClick={handleClear}
+            className="flex items-center gap-2 hover:bg-[#3a3a3a] px-2 py-1 rounded transition-colors"
+          >
+            <span className="text-gray-300 text-xs font-medium">Clear:</span>
+            <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+              CTRL+TAB
+            </kbd>
+          </button>
+        </div>
+
+        {/* AI Status */}
+        <div className="flex items-center gap-2">
+          <span className="text-gray-300 text-xs font-medium">AI:</span>
+          <span className={`text-xs ${isLoading ? "text-yellow-500 animate-pulse" : "text-gray-400"}`}>
+            {isLoading ? "Processing request..." : "Waiting for request"}
+          </span>
+          <kbd className="px-1 py-0.5 text-xs bg-[#3a3a3a] rounded text-gray-400 border border-[#4a4a4a]">
+            CTRL+SPACE
+          </kbd>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Input Area (hidden when response exists) */}
@@ -218,18 +547,42 @@ export default function DesktopAssistantPage() {
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Type your question or paste code here..."
+              placeholder="Type your question, paste code, use CMD+2 for mic, or CMD+3 for PC audio (Google Meet)..."
               className="w-full h-32 p-3 bg-[#252525] border border-[#3a3a3a] rounded-lg text-gray-200 text-sm resize-none focus:outline-none focus:border-violet-500 placeholder-gray-500"
               disabled={isLoading}
             />
+
+            {/* Screenshot Preview */}
+            {screenshot && (
+              <div className="relative">
+                <div className="text-xs text-gray-400 mb-1 flex items-center justify-between">
+                  <span>Screenshot Preview (CMD+4 to capture)</span>
+                  <button
+                    onClick={() => setScreenshot(null)}
+                    className="text-gray-500 hover:text-red-400 transition-colors"
+                    title="Remove screenshot"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="border border-[#3a3a3a] rounded-lg overflow-hidden bg-[#252525]">
+                  <img
+                    src={screenshot}
+                    alt="Screenshot preview"
+                    className="w-full h-auto max-h-48 object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>CMD+SHIFT+SPACE to submit | CMD+SHIFT+C to clear</span>
+              <span>CMD+SHIFT+SPACE submit | 2=mic | 3=PC audio | 4=screenshot | SHIFT+C clear</span>
               <button
                 onClick={handleSubmit}
-                disabled={isLoading || !question.trim()}
+                disabled={isLoading || (!question.trim() && !screenshot)}
                 className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-white text-sm transition-colors"
               >
-                {isLoading ? "Processing..." : "Submit"}
+                {isLoading ? "Processing..." : screenshot ? "Analyze Screenshot" : "Submit"}
               </button>
             </div>
           </div>

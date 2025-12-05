@@ -62,6 +62,7 @@ function createWindow() {
     skipTaskbar: true,
     resizable: true,
     hasShadow: false,
+    focusable: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -73,10 +74,11 @@ function createWindow() {
   // This is the KEY feature for invisibility
   mainWindow.setContentProtection(true)
 
-  // macOS specific: Make visible on all workspaces
+  // macOS specific: Make visible on all workspaces and stay on top
   if (process.platform === 'darwin') {
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    mainWindow.setAlwaysOnTop(true, 'screen-saver', 1)
+    // Use 'floating' level for better focus behavior while staying on top
+    mainWindow.setAlwaysOnTop(true, 'floating', 1)
   }
 
   // Windows specific
@@ -88,6 +90,24 @@ function createWindow() {
 
   // Hide from Alt+Tab (Windows)
   mainWindow.setSkipTaskbar(true)
+
+  // Focus the window when it's ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
+    mainWindow.focus()
+    // Set window opacity (0.0 = fully transparent, 1.0 = fully opaque)
+    mainWindow.setOpacity(0.85)
+  })
+
+  // Re-focus when clicked
+  mainWindow.on('focus', () => {
+    // Ensure it stays on top when focused
+    if (process.platform === 'darwin') {
+      mainWindow.setAlwaysOnTop(true, 'floating', 1)
+    } else {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    }
+  })
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -169,6 +189,12 @@ function toggleVisibility() {
   } else {
     mainWindow.show()
     mainWindow.focus()
+    // Ensure always on top after showing
+    if (process.platform === 'darwin') {
+      mainWindow.setAlwaysOnTop(true, 'floating', 1)
+    } else {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    }
   }
   isVisible = !isVisible
 }
@@ -239,4 +265,17 @@ ipcMain.on('set-always-on-top', (event, value) => {
 
 ipcMain.on('set-opacity', (event, value) => {
   mainWindow?.setOpacity(value)
+})
+
+// Get desktop sources for screen/window capture with audio
+ipcMain.handle('get-desktop-sources', async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ['window', 'screen'],
+    fetchWindowIcons: true,
+  })
+  return sources.map(source => ({
+    id: source.id,
+    name: source.name,
+    thumbnail: source.thumbnail.toDataURL(),
+  }))
 })

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { generateAIResponse } from "@/lib/ai/openai"
+import { generateAIResponse, generateVisionAIResponse } from "@/lib/ai/openai"
 import { ajAI } from "@/lib/arcjet"
 import type { ProgrammingLanguage } from "@/types"
 
@@ -18,20 +18,33 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { question, language } = body as {
+    const { question, language, screenshot } = body as {
       question: string
       language: ProgrammingLanguage
+      screenshot?: string // Base64 image data
     }
 
-    if (!question?.trim()) {
+    // If we have a screenshot, use vision AI even without a question
+    if (!question?.trim() && !screenshot) {
       return NextResponse.json(
-        { error: "Question is required" },
+        { error: "Question or screenshot is required" },
         { status: 400 }
       )
     }
 
-    // Generate AI response using FREE model
-    const aiResponse = await generateAIResponse(question, language || "javascript")
+    let aiResponse
+
+    // Use vision AI if screenshot is provided
+    if (screenshot) {
+      aiResponse = await generateVisionAIResponse(
+        question || "",
+        screenshot,
+        language || "javascript"
+      )
+    } else {
+      // Generate AI response using FREE model (text only)
+      aiResponse = await generateAIResponse(question, language || "javascript")
+    }
 
     return NextResponse.json({
       success: true,
@@ -39,8 +52,9 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error("Desktop AI Ask Error:", error)
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json(
-      { error: "Failed to generate response" },
+      { error: `Failed to generate response: ${errorMessage}` },
       { status: 500 }
     )
   }

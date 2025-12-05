@@ -120,3 +120,101 @@ export async function generateAIResponseStream(
 
   return stream
 }
+
+// Free vision model on OpenRouter
+// Options: google/gemini-2.0-flash-exp:free (rate limited), nvidia/nemotron-nano-12b-v2-vl:free
+// Using nvidia/nemotron-nano-12b-v2-vl:free - dedicated vision-language model with good rate limits
+const FREE_VISION_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
+
+const VISION_SYSTEM_PROMPT = `You are an expert programming assistant helping someone during a technical interview.
+You can see screenshots of their screen which may contain:
+- Coding problems/questions
+- Code they're working on
+- Error messages
+- Technical documentation
+
+Analyze the screenshot and help them understand and solve the problem.
+
+For each question, structure your response in this format:
+1. THOUGHTS: What you see in the screenshot and your analysis (2-3 sentences)
+2. CODE: The solution code (if applicable)
+3. KEY_POINTS: 3-5 bullet points explaining the key concepts
+
+Guidelines:
+- First describe what you see in the screenshot
+- If there's a coding problem, provide a clear solution
+- If there's an error, explain the cause and fix
+- Be concise but thorough
+- Write clean, well-commented code
+
+Remember: The user is in an interview setting, so be quick and precise.`
+
+export async function generateVisionAIResponse(
+  question: string,
+  screenshotBase64: string,
+  language: ProgrammingLanguage
+): Promise<AIResponse> {
+  // Check if API key is configured
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY is not configured")
+  }
+
+  const languageContext = language !== "other"
+    ? `The user is working with ${language}. Provide code examples in ${language}.`
+    : "Provide code examples in the most appropriate language."
+
+  // Build content array with text and image
+  const userContent: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = []
+
+  // Add the question text first (some models prefer text before image)
+  const questionText = question?.trim()
+    ? question
+    : "Please analyze this screenshot and help me understand/solve what's shown. If it's a coding problem, provide the solution."
+
+  userContent.push({
+    type: "text",
+    text: questionText
+  })
+
+  // Add the screenshot image
+  // Ensure proper data URL format
+  const imageUrl = screenshotBase64.startsWith("data:")
+    ? screenshotBase64
+    : `data:image/png;base64,${screenshotBase64}`
+
+  userContent.push({
+    type: "image_url",
+    image_url: {
+      url: imageUrl
+    }
+  })
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: FREE_VISION_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `${VISION_SYSTEM_PROMPT}\n\n${languageContext}`
+        },
+        {
+          role: "user",
+          content: userContent
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    })
+
+    const content = response.choices[0]?.message?.content || ""
+
+    if (!content) {
+      throw new Error("Empty response from vision model")
+    }
+
+    return parseAIResponse(content, language)
+  } catch (error) {
+    console.error("Vision AI error:", error)
+    throw error
+  }
+}
