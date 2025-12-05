@@ -172,9 +172,9 @@ function determinePlanFromProductId(productId: string): SubscriptionTier {
   // This should be configured based on your actual Polar product setup
   const productMap: Record<string, SubscriptionTier> = {
     // Replace with your actual Polar product IDs
-    "prod_essential": "essential",
+    // After creating products in Polar, add their IDs here
     "prod_professional": "professional",
-    "prod_expert": "expert",
+    "prod_enterprise": "enterprise",
   }
 
   return productMap[productId] || "free"

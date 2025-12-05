@@ -12,7 +12,7 @@ export interface User {
   updatedAt: Date
 }
 
-export type SubscriptionTier = "free" | "essential" | "professional" | "expert"
+export type SubscriptionTier = "free" | "professional" | "enterprise"
 
 // Question/Session types
 export interface Question {
