@@ -1,43 +1,120 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { CreditCard, Coins, TrendingUp, Receipt, ArrowRight } from "lucide-react"
+import { CreditCard, Coins, TrendingUp, Receipt, ArrowRight, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
+interface BillingData {
+  user: {
+    id: string
+    email: string
+    tokens: number
+    subscriptionTier: string
+  }
+  subscription: {
+    id: string
+    plan: string
+    status: string
+    currentPeriodStart: string
+    currentPeriodEnd: string
+  } | null
+  transactions: Array<{
+    id: string
+    amount: number
+    type: string
+    description: string
+    createdAt: string
+  }>
+}
+
+const plans = [
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    tokens: "5 tokens",
+  },
+  {
+    id: "professional",
+    name: "Professional",
+    price: "$149/mo",
+    tokens: "200 tokens/month",
+    popular: true,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: "$199/mo",
+    tokens: "500 tokens/month",
+  },
+]
+
 export default function BillingPage() {
-  // Mock data - will be replaced with actual billing data
-  const billing = {
-    plan: "free",
-    tokens: 3,
-    nextReset: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+  const [billingData, setBillingData] = useState<BillingData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchBillingData() {
+      try {
+        const response = await fetch("/api/billing")
+        if (!response.ok) {
+          throw new Error("Failed to fetch billing data")
+        }
+        const data = await response.json()
+        setBillingData(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBillingData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+      </div>
+    )
   }
 
-  const plans = [
-    {
-      id: "free",
-      name: "Free",
-      price: "$0",
-      tokens: "5 tokens",
-      current: billing.plan === "free",
-    },
-    {
-      id: "professional",
-      name: "Professional",
-      price: "$149/mo",
-      tokens: "200 tokens/month",
-      current: billing.plan === "professional",
-      popular: true,
-    },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      price: "$199/mo",
-      tokens: "500 tokens/month",
-      current: billing.plan === "enterprise",
-    },
-  ]
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <CreditCard className="h-8 w-8 text-violet-500" />
+            Billing
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your subscription and billing
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-red-500">Error: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const currentPlan = billingData?.user.subscriptionTier || "free"
+  const tokens = billingData?.user.tokens || 0
+  const subscription = billingData?.subscription
+  const transactions = billingData?.transactions || []
+
+  // Calculate token usage percentage
+  const planConfig = plans.find(p => p.id === currentPlan)
+  const maxTokens = currentPlan === "free" ? 5 : currentPlan === "professional" ? 200 : 500
+  const usedTokens = maxTokens - tokens
+  const usagePercent = Math.min((usedTokens / maxTokens) * 100, 100)
 
   return (
     <div className="space-y-6">
@@ -65,16 +142,23 @@ export default function BillingPage() {
                 <Coins className="h-6 w-6 text-violet-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold capitalize">{billing.plan}</p>
+                <p className="text-2xl font-bold capitalize">{currentPlan}</p>
                 <p className="text-sm text-muted-foreground">
-                  {billing.tokens} tokens remaining
+                  {tokens} tokens remaining
                 </p>
               </div>
             </div>
-            <Badge variant={billing.plan === "free" ? "outline" : "default"}>
-              {billing.plan === "free" ? "Free Tier" : "Active"}
+            <Badge variant={currentPlan === "free" ? "outline" : "default"}>
+              {subscription?.status === "active" ? "Active" : currentPlan === "free" ? "Free Tier" : subscription?.status || "Free Tier"}
             </Badge>
           </div>
+          {subscription && (
+            <div className="mt-4 text-sm text-muted-foreground">
+              <p>
+                Current period: {new Date(subscription.currentPeriodStart).toLocaleDateString()} - {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -100,14 +184,14 @@ export default function BillingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">{plan.tokens}</p>
-              {plan.current ? (
+              {currentPlan === plan.id ? (
                 <Button variant="outline" className="w-full" disabled>
                   Current Plan
                 </Button>
               ) : (
                 <Link href="/pricing">
                   <Button variant={plan.popular ? "gradient" : "outline"} className="w-full">
-                    Upgrade
+                    {plan.id === "free" ? "Downgrade" : "Upgrade"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
@@ -130,13 +214,19 @@ export default function BillingPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span>Tokens Used</span>
-              <span className="font-medium">0 / 3</span>
+              <span className="font-medium">{usedTokens} / {maxTokens}</span>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-violet-500" style={{ width: "0%" }} />
+              <div
+                className="h-full bg-violet-500 transition-all duration-300"
+                style={{ width: `${usagePercent}%` }}
+              />
             </div>
             <p className="text-xs text-muted-foreground">
-              Resets on {billing.nextReset.toLocaleDateString()}
+              {tokens} tokens remaining
+              {subscription && (
+                <> · Resets on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}</>
+              )}
             </p>
           </div>
         </CardContent>
@@ -149,12 +239,33 @@ export default function BillingPage() {
             <Receipt className="h-5 w-5 text-violet-500" />
             Billing History
           </CardTitle>
-          <CardDescription>Your past invoices and payments</CardDescription>
+          <CardDescription>Your past transactions and token usage</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No billing history yet
-          </p>
+          {transactions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No billing history yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between py-2 border-b last:border-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{transaction.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(transaction.createdAt).toLocaleDateString()} · {transaction.type}
+                    </p>
+                  </div>
+                  <Badge variant={transaction.amount > 0 ? "default" : "secondary"}>
+                    {transaction.amount > 0 ? "+" : ""}{transaction.amount} tokens
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

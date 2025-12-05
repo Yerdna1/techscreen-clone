@@ -168,13 +168,16 @@ export async function POST(request: NextRequest) {
 }
 
 function determinePlanFromProductId(productId: string): SubscriptionTier {
-  // Map your Polar product IDs to plans
-  // This should be configured based on your actual Polar product setup
+  const isSandbox = process.env.POLAR_SANDBOX === "true"
+
+  // Map Polar product IDs to plans (both live and sandbox)
   const productMap: Record<string, SubscriptionTier> = {
-    // Replace with your actual Polar product IDs
-    // After creating products in Polar, add their IDs here
-    "prod_professional": "professional",
-    "prod_enterprise": "enterprise",
+    // Live product IDs
+    [process.env.POLAR_PRODUCT_PROFESSIONAL || ""]: "professional",
+    [process.env.POLAR_PRODUCT_ENTERPRISE || ""]: "enterprise",
+    // Sandbox product IDs
+    [process.env.POLAR_PRODUCT_PROFESSIONAL_SANDBOX || ""]: "professional",
+    [process.env.POLAR_PRODUCT_ENTERPRISE_SANDBOX || ""]: "enterprise",
   }
 
   return productMap[productId] || "free"
