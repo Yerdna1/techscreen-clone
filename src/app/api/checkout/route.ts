@@ -51,7 +51,12 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://techscreen-clone.vercel.app"
 
     // Create Polar checkout session using the v1 API
-    const response = await fetch("https://api.polar.sh/v1/checkouts/", {
+    // Use sandbox-api.polar.sh for testing, api.polar.sh for production
+    const polarApiUrl = process.env.POLAR_SANDBOX === "true"
+      ? "https://sandbox-api.polar.sh/v1/checkouts/"
+      : "https://api.polar.sh/v1/checkouts/"
+
+    const response = await fetch(polarApiUrl, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${polarToken}`,
